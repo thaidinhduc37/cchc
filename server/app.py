@@ -1,12 +1,17 @@
 from flask import Flask
-from web_server.routes import chatbot, navigation  # Thêm navigation
-from web_server.middleware import setup_middleware
+from flask_cors import CORS  # ✅ THÊM DÒNG NÀY
+from routes.chat_routes import chat_routes
+from routes.assistant_routes import assistant_routes
 
 app = Flask(__name__)
-setup_middleware(app)
+CORS(app)  # ✅ Cho phép frontend gọi từ http://localhost:3000
 
-app.register_blueprint(chatbot.bp)
-app.register_blueprint(navigation.bp)  # Thêm dòng này
+app.register_blueprint(chat_routes)
+app.register_blueprint(assistant_routes)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route("/", methods=["GET"])
+def health_check():
+    return {"status": "OK", "message": "DVC Assistant Server is running."}
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

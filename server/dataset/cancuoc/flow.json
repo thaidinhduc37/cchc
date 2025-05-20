@@ -1,0 +1,117 @@
+{
+  "questions": [
+    {
+      "id": "start",
+      "question": "Bạn đã sẵn sàng thực hiện thủ tục Cấp Căn cước chưa?",
+      "next": "has_cccd"
+    },
+    {
+      "id": "has_cccd",
+      "question": "Bạn đã có thẻ Căn cước chưa?",
+      "options": [
+        {
+          "label": "Chưa có",
+          "next": "age"
+        },
+        {
+          "label": "Đã có",
+          "next": "has_vneid"
+        }
+      ]
+    },
+    {
+      "id": "age",
+      "question": "Bạn bao nhiêu tuổi?",
+      "options": [
+        {
+          "label": "Dưới 14 tuổi",
+          "flow": "duoi_14_chua_co"
+        },
+        {
+          "label": "Từ đủ 14 tuổi",
+          "flow": "tu_14_chua_co"
+        }
+      ]
+    },
+    {
+      "id": "has_vneid",
+      "question": "Bạn có tài khoản VNeID không?",
+      "options": [
+        {
+          "label": "Có",
+          "flow": "da_co_cccd_vneid"
+        },
+        {
+          "label": "Không",
+          "flow": "da_co_cccd_het_han"
+        }
+      ]
+    }
+  ],
+  "flows": {
+    "duoi_14_chua_co": {
+      "name": "Công dân dưới 14 tuổi chưa có thẻ Căn cước",
+      "steps": ["1.2", "2.1", "3", "4", "5", "6", "7.1", "8", "9", "10"]
+    },
+    "tu_14_chua_co": {
+      "name": "Công dân từ đủ 14 tuổi chưa có thẻ CCCD",
+      "steps": ["1.2", "2.2", "3", "4", "5", "6", "7.2", "8", "9", "10"]
+    },
+    "da_co_cccd_het_han": {
+      "name": "Công dân từ đủ 14 tuổi, đã có thẻ CCCD nhưng thẻ hết hạn quá 30 ngày",
+      "steps": ["1.2", "2.2", "3", "4", "5", "6", "7.3", "8", "9", "10"]
+    },
+    "da_co_cccd_vneid": {
+      "name": "Công dân đã có thẻ Căn cước, VneID còn đăng nhập được",
+      "steps": ["1.1", "2.2", "3", "4", "7.3", "8", "9", "10"]
+    },
+    "cap_doi_duoi_14": {
+      "name": "Cấp đổi thẻ Căn cước cho công dân dưới 14 tuổi",
+      "steps": ["1.2", "2.3", "3", "4", "5", "6", "7.4", "8", "9", "10"]
+    },
+    "cap_doi_tu_14_khong_vneid": {
+      "name": "Cấp đổi thẻ Căn cước cho công dân từ đủ 14 tuổi chưa có VneID",
+      "steps": ["1.2", "2.3", "3", "4", "5", "6", "7.4", "8", "9", "10"]
+    },
+    "cap_doi_tu_14_co_vneid": {
+      "name": "Cấp đổi thẻ Căn cước cho công dân từ đủ 14 tuổi đã có VneID",
+      "steps": ["1.2", "2.3", "3", "4", "7.4", "8", "9", "10"]
+    },
+    "lon_tuoi": {
+      "name": "Công dân lớn tuổi",
+      "description": "Hướng dẫn công dân đi làm trực tiếp",
+      "steps": []
+    }
+  },
+  "steps": {
+    "1": {
+      "name": "Đăng nhập vào Cổng dịch vụ công Bộ Công an",
+      "substeps": {
+        "1.1": "Đăng nhập bằng tài khoản VneID của cá nhân",
+        "1.2": "Đăng nhập bằng tài khoản VneID của cha/mẹ/người đại diện hợp pháp"
+      }
+    },
+    "2": {
+      "name": "Chọn thủ tục",
+      "substeps": {
+        "2.1": "Cấp thẻ căn cước cho người dưới 14 tuổi (thực hiện tại cấp tỉnh)",
+        "2.2": "Cấp thẻ căn cước cho người từ đủ 14 tuổi trở lên (thực hiện tại cấp tỉnh)"
+      }
+    },
+    "3": "Bấm vào 'Nộp hồ sơ'",
+    "4": "Kiểm tra thông tin người kê khai (Điền số điện thoại nếu chưa có)",
+    "5": "Tích vào ô 'Người kế khai là cha/mẹ/người đại diện hợp pháp của người cần cấp Căn cước'",
+    "6": "Bấm kiểm tra thông tin so với CSDL Quốc gia về dân cư",
+    "7": {
+      "name": "Chọn lý do cấp",
+      "substeps": {
+        "7.1": "Cấp thẻ Căn cước lần đầu",
+        "7.2": "Chưa có thẻ CCCD thì 'Cấp thẻ Căn cước lần đầu'",
+        "7.3": "Đã có thẻ CCCD thì chọn 'Cấp thẻ Căn cước chuyển từ thẻ CCCD gắn chíp'"
+      }
+    },
+    "8": "Chọn đơn vị thu nhận",
+    "9": "Tích vào ô 'Tôi xin cam đoan những thông tin kê khai trên là đúng sự thật' và chọn Lưu và tiếp tục",
+    "10": "Chọn ngày thu nhận và bấm 'Nộp hồ sơ'"
+  }
+}

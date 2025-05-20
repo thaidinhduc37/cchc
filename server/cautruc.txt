@@ -1,0 +1,54 @@
+/server/
+├── app.py                 # Khởi chạy Flask server
+├── run.py                 # File chạy server chính (có thể dùng Gunicorn)
+├── requirements.txt       # Danh sách thư viện cần cài đặt
+├── .env                   # Biến môi trường (API Key, cấu hình)
+│
+├── common/                # Chứa code dùng chung
+│   ├── utils.py           # Hàm tiện ích (xử lý text, pyvi, fuzzywuzzy)
+│   ├── data_loader.py     # Xử lý JSON, PDF, dùng LlamaIndex
+│   ├── conversation.py    # Quản lý lịch sử hội thoại
+│   ├── processor.py       # Xử lý logic chính (query AI, tìm kiếm thông tin)
+│   ├── config.py          # Cấu hình chung (dùng python-dotenv)
+│   ├── ai.py              # Kết nối AI (Gemma, OpenAI, Gemini, v.v.)
+│   ├── logger.py          # Ghi log hệ thống
+│   └── security.py        # Mã hóa, bảo mật (JWT, token)
+│
+├── domains/               # Chia theo lĩnh vực dịch vụ công
+│   ├── cancuoc/          # Nhóm thủ tục cấp Căn cước, hộ khẩu, v.v.
+│   │   ├── cancuoc.json   # Dữ liệu JSON chứa câu trả lời
+│   │   ├── cancuoc.py     # Xử lý logic riêng cho công dân
+│   │   ├── interation_flow.json   #Xử lý các bước, thủ tục nộp hồ sơ
+│   ├── cutru/        # Nhóm thủ tục đăng ký xe, GPLX, v.v.
+│   │   ├── cutru.json
+│   │   ├── cutru.py
+│   │   ├── interation_flow.json   #Xử lý các bước, thủ tục nộp hồ sơ
+│   └── ... (mở rộng sau)  
+│
+├── web-server/            # API mở cho frontend
+│   ├── scripts.json       # Dữ liệu hướng dẫn
+│   ├── pdfs/              # Chứa các file PDF về DVC
+│   ├── config.py          # Cấu hình web-server
+│   ├── routes/            # Chia route Flask theo module
+│   │   ├── chatbot.py     # API cho chatbot
+│   │   ├── search.py      # API tìm kiếm văn bản, luật
+│   │   ├── user.py        # API quản lý người dùng
+│   │   └── upload.py      # API tải lên file (PDF, ảnh)
+│   ├── middleware.py      # Xử lý CORS, bảo mật request
+│   ├── templates/         # Nếu có gửi email hoặc HTML động
+│   ├── static/            # Chứa file tĩnh (nếu cần)
+│   └── tests/             # Unit test API
+│
+├── internal-server/       # Dữ liệu bảo mật, chỉ có backend truy cập
+│   ├── secure_data/       # Dữ liệu nhạy cảm (không public)
+│   ├── config.py          # Cấu hình backend nội bộ
+│   ├── auth.py            # Xác thực nội bộ (JWT, OAuth)
+│   ├── db/                # Cơ sở dữ liệu (SQLite/PostgreSQL)
+│   ├── services/          # Giao tiếp với AI, RAG, VectorDB
+│   ├── job_scheduler.py   # Định kỳ cập nhật dữ liệu (Celery, Cronjob)
+│   └── requirements.txt   # Thư viện cần cho nội bộ
+│
+└── docs/                  # Tài liệu API, hướng dẫn setup
+    ├── api.md             # Tài liệu API REST
+    ├── setup.md           # Hướng dẫn cài đặt
+    └── changelog.md       # Lịch sử cập nhật

@@ -1,0 +1,21 @@
+{
+  "flow": [
+    {
+      "id": "start",
+      "stepNumber": 1,
+      "title": "Bắt đầu thực hiện thủ tục",
+      "question": "Bạn muốn bắt đầu quy trình trong lĩnh vực này?",
+      "type": "info",
+      "image": null,
+      "next": "end"
+    },
+    {
+      "id": "end",
+      "stepNumber": 2,
+      "title": "Kết thúc thủ tục",
+      "question": "Bạn đã hoàn tất các bước cần thiết.",
+      "type": "end",
+      "image": null
+    }
+  ]
+}

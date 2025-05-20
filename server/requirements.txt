@@ -1,0 +1,10 @@
+flask
+python-dotenv
+ollama
+llama-index
+PyMuPDF
+faiss-cpu
+transformers
+python-docx
+PyPDF2
+flask-cors

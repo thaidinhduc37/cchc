@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "field": "",
+      "procedure": "",
+      "keywords": ["chào bạn", "hello", "hi"],
+      "responses": ["Chào bạn! Mình có thể giúp gì cho bạn?"]
+    },
+    {
+      "field": "",
+      "procedure": "",
+      "keywords": ["không hiểu", "lạ lạ", "hướng dẫn lại"],
+      "responses": [
+        "Không biết bạn không hiểu cái gì, bạn hãy nói rõ hơn đi!",
+        "Bạn hãy nói rõ hơn đi, mình sẽ giúp bạn!"
+      ]
+    }
+  ]
+}

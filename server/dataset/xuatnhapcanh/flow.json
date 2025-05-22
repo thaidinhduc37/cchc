@@ -1,0 +1,65 @@
+{
+  "questions": [
+    {
+      "id": "start",
+        "question": "Chào bạn! Rất vui được hỗ trợ bạn. \n \n Để có thể thực hiện các thủ tục liên quan đến lĩnh vực Xuất nhập cảnh. bạn cần phải chuẩn bị những điều sau\n \nMột là: Sử dụng điện thoại hoặc máy tính có kết nối internet truy cập vào Cổng dịch vụ công quốc gia hoặc Cổng dịch vụ công Bộ Công an.\n \n Hai là: Có tài khoản VNeID mức độ 2.\n Ba là: Có các giấy tờ cần thiết như CCCD/Căn cước, giấy khai sinh cho trẻ em, giấy xác nhận mất hộ chiếu, v.v..\n \n Bạn đã chuẩn bị đầy đủ chưa?",
+        "options": [{ "label": "Tôi đã rõ", "next": "begin" }]
+    },
+    {
+      "id": "begin",
+      "question": "Bạn muốn thực hiện thủ tục gì về hộ chiếu?",
+      "options": [
+        { "label": "Cấp hộ chiếu lần đầu", "next": "age" },
+        { "label": "Cấp lại/đổi hộ chiếu", "next": "reason" }
+      ]
+    },
+    {
+      "id": "age",
+      "question": "Bạn bao nhiêu tuổi?",
+      "options": [
+        { "label": "Dưới 14 tuổi", "flow": "cap_moi_duoi_14" },
+        { "label": "Từ đủ 14 tuổi trở lên", "flow": "cap_moi_tu_14" }
+      ]
+    },
+    {
+      "id": "reason",
+      "question": "Lý do bạn muốn cấp lại/đổi hộ chiếu?",
+      "options": [
+        { "label": "Hộ chiếu hết hạn", "flow": "cap_lai_het_han" },
+        { "label": "Bị mất hộ chiếu", "flow": "cap_lai_mat" },
+        { "label": "Bị hư hỏng, thay đổi thông tin", "flow": "cap_lai_hu_hong" }
+      ]
+    }
+  ],
+  "flows": {
+    "cap_moi_duoi_14": {
+      "name": "Cấp hộ chiếu lần đầu cho công dân dưới 14 tuổi",
+      "steps": ["1", "2", "3", "4", "5", "6", "7"]
+    },
+    "cap_moi_tu_14": {
+      "name": "Cấp hộ chiếu lần đầu cho công dân từ đủ 14 tuổi trở lên",
+      "steps": ["1", "2", "3", "4", "5", "6", "7"]
+    },
+    "cap_lai_het_han": {
+      "name": "Cấp lại hộ chiếu do hết hạn",
+      "steps": ["1", "2", "3", "4", "5", "6", "7"]
+    },
+    "cap_lai_mat": {
+      "name": "Cấp lại hộ chiếu do bị mất",
+      "steps": ["1", "2", "3", "4", "5", "6", "7"]
+    },
+    "cap_lai_hu_hong": {
+      "name": "Cấp lại hộ chiếu do hư hỏng, thay đổi thông tin",
+      "steps": ["1", "2", "3", "4", "5", "6", "7"]
+    }
+  },
+  "steps": {
+    "1": "Đăng nhập vào Cổng dịch vụ công quốc gia hoặc Cổng dịch vụ công Bộ Công an.",
+    "2": "Chọn thủ tục 'Cấp hộ chiếu phổ thông' phù hợp với trường hợp của bạn.",
+    "3": "Khai thông tin tờ khai đề nghị cấp hộ chiếu theo mẫu.",
+    "4": "Tải lên ảnh chân dung (nếu có yêu cầu) và các giấy tờ liên quan (CMND/CCCD, giấy khai sinh cho trẻ em, giấy xác nhận mất hộ chiếu, v.v.).",
+    "5": "Kiểm tra lại thông tin, xác nhận cam kết và nộp hồ sơ.",
+    "6": "Thanh toán lệ phí trực tuyến (nếu có).",
+    "7": "Theo dõi kết quả xử lý hồ sơ, nhận hộ chiếu tại nơi đăng ký hoặc qua bưu điện."
+  }
+}

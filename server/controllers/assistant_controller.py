@@ -1,57 +1,75 @@
-from services.ollama_service import OllamaService
-from services.flow_engine import FlowEngine
+from services.unified_processor import process_user_query
 from services.speech_services.text_to_speech import TextToSpeech
 from services.speech_services.speech_to_text import SpeechToText
+from typing import Dict, Any
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("AssistantUnifiedController")
 
 class AssistantController:
-    def __init__(self, flow_path: str):
-        self.engine = FlowEngine(flow_path)
-        self.ollama = OllamaService()
+    def __init__(self, domain: str = "xuatnhapcanh"):
         self.tts = TextToSpeech()
         self.stt = SpeechToText()
-        self.user_steps = {}  # Lưu trạng thái bước theo user
+        self.domain = domain
+        self.sessions: Dict[str, Dict[str, Any]] = {}
+        self.exit_commands = ["xong", "kết thúc", "tắt", "thoát", "exit", "bye", "goodbye"]
 
-    # ✅ API khởi động: gửi câu hỏi đầu tiên
-    def start_assistant(self, user_id: str):
-        first_step = self.engine.get_step("start")
-        if not first_step:
-            return {"error": "Không tìm thấy bước bắt đầu"}
-        self.user_steps[user_id] = first_step.get("id")
-        return {"step": first_step}
+    def start_assistant(self, user_id: str) -> Dict[str, Any]:
+        logger.info(f"[Assistant] Khởi động trợ lý cho {user_id}")
+        self.sessions[user_id] = {
+            "start_time": time.time(),
+            "last_interaction": time.time(),
+            "context": {}
+        }
+        return {
+            "text": "🎤 Trợ lý ảo đã sẵn sàng. Mời bạn nói câu hỏi.",
+            "source": "assistant",
+            "success": True
+        }
 
-    # ✅ API bước tiếp theo: nhận trả lời, sinh phản hồi, điều phối bước
-    def next_step(self, user_id: str, user_input: str):
-        current_id = self.user_steps.get(user_id)
-        if not current_id:
-            return {"error": "Chưa khởi động trợ lý ảo"}
+    def next_step(self, user_id: str, user_input: str) -> Dict[str, Any]:
+        lowered = user_input.strip().lower()
 
-        # Gửi vào Ollama để tạo phản hồi
-        response = self.ollama.ask(user_input)
-        self.tts.speak(response)  # Đọc phản hồi
+        if any(cmd in lowered for cmd in self.exit_commands):
+            self.sessions.pop(user_id, None)
+            return {
+                "text": "✅ Trợ lý ảo đã tắt. Hẹn gặp lại!",
+                "source": "assistant",
+                "user_input": user_input,
+                "done": True
+            }
 
-        # Lấy bước kế tiếp
-        next_step = self.engine.get_next_step(current_id)
-        if next_step:
-            self.user_steps[user_id] = next_step.get("id")
-            return {"reply": response, "next_step": next_step}
-        else:
-            return {"reply": response, "done": True}
+        if user_id not in self.sessions:
+            return {
+                "text": "⚠️ Bạn chưa khởi động trợ lý ảo. Vui lòng bấm nút mic trước.",
+                "source": "assistant",
+                "user_input": user_input,
+                "success": False
+            }
 
-    # ✅ Dùng để test thực tế bằng mic (CLI test)
-    def run_assistant(self, user_id: str):
-        print("🚀 Bắt đầu phiên trợ lý ảo (bằng giọng nói)...")
-        step = self.engine.get_step("start")
-        while step:
-            question = step.get("question", "Hãy cung cấp thông tin:")
-            print(f"[Trợ lý hỏi]: {question}")
-            self.tts.speak(question)
+        try:
+            self.sessions[user_id]["last_interaction"] = time.time()
 
-            user_input = self.stt.listen_and_transcribe()
-            print(f"[Người dùng]: {user_input}")
+            result = process_user_query(user_input, user_id, domain=self.domain)
+            response_text = result.get("text", "Xin lỗi, tôi không có câu trả lời.")
 
-            response = self.ollama.ask(user_input)
-            print(f"[Trợ lý]: {response}")
-            self.tts.speak(response)
+            # Đọc lại phản hồi
+            self.tts.speak(response_text)
 
-            step = self.engine.get_next_step(step.get("id"))
-        print("✅ Kết thúc quy trình.")
+            return {
+                "text": response_text,
+                "source": result.get("source", "assistant"),
+                "user_input": user_input,
+                "success": True
+            }
+        except Exception as e:
+            logger.exception("❌ Lỗi trong assistant:")
+            return {
+                "text": "❌ Trợ lý gặp lỗi. Vui lòng thử lại.",
+                "source": "assistant",
+                "user_input": user_input,
+                "success": False,
+                "error": str(e)
+            }

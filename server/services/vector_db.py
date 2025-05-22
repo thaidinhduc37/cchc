@@ -2,14 +2,14 @@ import os
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from services.unified_processor import DocumentProcessor
+from services.document_processor import DocumentProcessor
 
 class VectorDatabase:
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
         self.document_processor = DocumentProcessor()
-        self.domain_docs = {}         # { domain: [doc1, doc2, ...] }
-        self.domain_vectors = {}      # { domain: vector_matrix }
+        self.domain_docs = {}
+        self.domain_vectors = {}
 
     def build_vectors_for_domain(self, domain: str, dataset_dir: str):
         domain_path = os.path.join(dataset_dir, domain)
@@ -33,15 +33,13 @@ class VectorDatabase:
         self.domain_docs[domain] = docs
         self.domain_vectors[domain] = vectors
         self._save_embeddings(domain, docs)
-
-        print(f"✅ Đã tạo vector cho lĩnh vực: {domain} ({len(docs)} tài liệu)")
+        print(f"✅ Đã tạo vector cho {domain} ({len(docs)} tài liệu)")
 
     def _save_embeddings(self, domain: str, docs: list):
         os.makedirs("vector_db/embeddings", exist_ok=True)
         path = f"vector_db/embeddings/{domain}.json"
-        data = [{"content": doc} for doc in docs]
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump([{"content": doc} for doc in docs], f, ensure_ascii=False, indent=2)
 
     def load_vectors_for_domain(self, domain: str):
         path = f"vector_db/embeddings/{domain}.json"
@@ -59,7 +57,6 @@ class VectorDatabase:
     def search(self, domain: str, query: str, top_k: int = 3):
         if domain not in self.domain_docs:
             self.load_vectors_for_domain(domain)
-
         if domain not in self.domain_vectors:
             return []
 

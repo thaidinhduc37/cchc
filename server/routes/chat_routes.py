@@ -1,17 +1,25 @@
+# server/routes/chat_routes.py
+
 from flask import Blueprint, request, jsonify
 from controllers.chat_controller import ChatController
 
 chat_routes = Blueprint("chat_routes", __name__)
-chat_controller = ChatController()
+controller = ChatController()
 
-@chat_routes.route("/api/chat", methods=["POST"])
-def chat():
-    data = request.get_json()
-    user_id = data.get("user_id")
-    message = data.get("message")
+@chat_routes.route("/chat/ask", methods=["POST"])
+def ask():
+    data = request.json
+    user_id = data.get("user_id", "anonymous")
+    message = data.get("message", "")
+    domain = data.get("domain", "xuatnhapcanh")
 
-    if not user_id or not message:
-        return jsonify({"error": "Thiếu user_id hoặc message"}), 400
+    # Kiểm tra nếu user hỏi về quy trình/các bước/hướng dẫn
+    keywords = ["quy trình", "các bước", "hướng dẫn", "thủ tục"]
+    show_flow_button = any(kw in message.lower() for kw in keywords)
 
-    reply = chat_controller.handle_chat(user_id, message)
-    return jsonify({"reply": reply})
+    result = controller.handle_chat(user_id, message, domain)
+
+    if show_flow_button:
+        result["show_flow_button"] = True
+
+    return jsonify(result)

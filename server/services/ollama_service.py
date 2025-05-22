@@ -5,10 +5,12 @@ class OllamaService:
         self.base_url = "http://localhost:11434/api/generate"
         self.model = model
 
-    def ask(self, prompt: str) -> str:
+    def ask(self, prompt: str, instruction: str = None) -> str:
+        full_prompt = f"{instruction.strip()}\n\n{prompt.strip()}" if instruction else prompt
+
         payload = {
             "model": self.model,
-            "prompt": prompt,
+            "prompt": full_prompt,
             "stream": False
         }
 

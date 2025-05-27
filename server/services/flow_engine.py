@@ -1,42 +1,79 @@
+# flow_engine.py
+
 import json
 from pathlib import Path
 
-FLOW_PATH = Path(__file__).parent.parent / "dataset" / "xuatnhapcanh" / "flow.json"
-
 class FlowEngine:
-    def __init__(self):
-        with open(FLOW_PATH, encoding="utf-8") as f:
-            self.flow = json.load(f)
-        self.questions = {q["id"]: q for q in self.flow["questions"]}
-        self.flows = self.flow["flows"]
-        self.steps = self.flow.get("steps", {})
-        self.user_flows = {}  # Thêm dòng này nếu cần lưu flow theo user
+    def __init__(self, flow_path):
+        self.flow_data = self._load_flow(flow_path)
+        self.flows = self.flow_data.get("flows", {})
+        self.user_progress = {}  # user_id -> { flow_id, step_index }
 
-    def get_question(self, qid):
-        return self.questions.get(qid)
+    def _load_flow(self, path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
-    def get_flow_steps(self, flow_id):
-        flow = self.flows.get(flow_id)
-        if not flow:
-            return []
-        step_ids = flow.get("steps", [])
-        return [self.steps.get(sid, f"Bước {sid}") for sid in step_ids]
+    def is_in_flow(self, user_id):
+        return user_id in self.user_progress
 
-    def navigate(self, answers):
-        current_id = "start"
-        for ans in answers:
-            q = self.get_question(current_id)
-            if not q:
-                return []
-            next_id = None
-            for opt in q.get("options", []):
-                if opt["label"] == ans["option"]:
-                    next_id = opt.get("next") or opt.get("flow")
-                    break
-            if not next_id:
-                return []
-            if next_id in self.flows:
-                return self.get_flow_steps(next_id)
-            current_id = next_id
-        return self.get_question(current_id)
+    def handle_user_input(self, user_id, message):
+        message = message.lower().strip()
+        if message in ["xong", "tiếp", "tiếp tục"]:
+            return self.next_step(user_id)
+        elif message in ["quay lại", "lùi lại"]:
+            return self.previous_step(user_id)
+        elif message in ["bắt đầu lại", "reset"]:
+            flow_id = self.user_progress.get(user_id, {}).get("flow_id")
+            return self.start_flow(user_id, flow_id) if flow_id else {"error": "Chưa có flow để bắt đầu lại."}
+        else:
+            return {"message": f"🤖 Không rõ yêu cầu: '{message}'"}
 
+    def start_flow(self, user_id, flow_id):
+        if flow_id not in self.flows:
+            return {"error": "Flow ID không tồn tại."}
+        self.user_progress[user_id] = {"flow_id": flow_id, "step_index": 1}
+        return self.get_current_step(user_id)
+
+    def get_current_step(self, user_id):
+        state = self.user_progress.get(user_id)
+        if not state:
+            return {"error": "User chưa bắt đầu flow nào."}
+
+        flow_id = state["flow_id"]
+        step_index = str(state["step_index"])
+        steps = self.flows[flow_id].get("steps", {})
+        step = steps.get(step_index)
+
+        if not step:
+            return {"done": True, "message": "✅ Bạn đã hoàn tất tất cả các bước."}
+
+        return {
+            "step": step,
+            "current": step_index,
+            "flow_id": flow_id,
+            "wait_for_user": step.get("wait_for_user", True)
+        }
+
+    def next_step(self, user_id):
+        if user_id not in self.user_progress:
+            return {"error": "User chưa bắt đầu flow nào."}
+
+        self.user_progress[user_id]["step_index"] += 1
+        return self.get_current_step(user_id)
+
+    def previous_step(self, user_id):
+        if user_id not in self.user_progress:
+            return {"error": "User chưa bắt đầu flow nào."}
+
+        if self.user_progress[user_id]["step_index"] > 1:
+            self.user_progress[user_id]["step_index"] -= 1
+        return self.get_current_step(user_id)
+
+    def reset(self, user_id):
+        if user_id in self.user_progress:
+            del self.user_progress[user_id]
+        return {"message": "🔄 Đã reset trạng thái flow cho user."}
+
+
+# Khởi tạo engine dùng file flow mẫu
+flow_engine = FlowEngine("dataset/xuatnhapcanh/flow.json")

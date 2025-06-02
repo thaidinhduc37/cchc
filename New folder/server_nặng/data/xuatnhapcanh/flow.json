@@ -1,0 +1,169 @@
+{
+  "questions": [
+    {
+      "id": "start",
+      "question": "Chào bạn! Rất vui được hỗ trợ bạn. \n \n Để thực hiện hồ sơ. bạn cần phải chuẩn bị những điều sau\n \n Một là: Sử dụng điện thoại hoặc máy tính có kết nối internet truy cập vào Cổng dịch vụ công quốc gia hoặc Cổng dịch vụ công Bộ Công an.\n \n Hai là: Có tài khoản VNeID mức độ 2.\n Ba là: Có các giấy tờ cần thiết như CCCD/Căn cước, giấy khai sinh cho trẻ em, giấy xác nhận mất hộ chiếu, v.v..\n \n Bạn đã chuẩn bị đầy đủ chưa?",
+      "options": [
+        {
+          "label": "Tôi đã rõ",
+          "next": "begin"
+        }
+      ]
+    },
+    {
+      "id": "begin",
+      "question": "Bạn muốn thực hiện thủ tục gì về hộ chiếu?",
+      "options": [
+        {
+          "label": "Cấp hộ chiếu lần đầu",
+          "next": "age"
+        },
+        {
+          "label": "Cấp lại/đổi hộ chiếu",
+          "next": "reason"
+        }
+      ]
+    },
+    {
+      "id": "age",
+      "question": "Bạn bao nhiêu tuổi?",
+      "options": [
+        {
+          "label": "Dưới 14 tuổi",
+          "flow": "cap_moi_duoi_14"
+        },
+        {
+          "label": "Từ đủ 14 tuổi trở lên",
+          "flow": "cap_moi_tu_14"
+        }
+      ]
+    },
+    {
+      "id": "reason",
+      "question": "Lý do bạn muốn cấp lại/đổi hộ chiếu?",
+      "options": [
+        {
+          "label": "Hộ chiếu hết hạn",
+          "flow": "cap_lai_het_han"
+        },
+        {
+          "label": "Bị mất hộ chiếu",
+          "flow": "cap_lai_mat"
+        },
+        {
+          "label": "Bị hư hỏng, thay đổi thông tin",
+          "flow": "cap_lai_hu_hong"
+        }
+      ]
+    }
+  ],
+  "flows": {
+    "cap_moi_tu_14": {
+      "name": "Cấp hộ chiếu lần đầu cho công dân từ đủ 14 tuổi trở lên",
+      "description": "",
+      "steps": {
+        "1": {
+          "name": "Bước 1: Truy cập Cổng dịch vụ công Bộ Công an bằng cách: \n \n- Trên máy tính: Mở trình duyệt web và truy cập vào địa chỉ https://dichvucong.bocongan.gov.vn/\n \n- Trên điện thoại: Mở Trình duyệt Goolge/Chrome/Safari,... và truy cập vào địa chỉ https://dichvucong.bocongan.gov.vn/\n \n Hoặc sử dụng Zalo, ứng dụng quét mã QR để quét mã QR bên cạnh",
+          "description": "Đăng nhập vào Cổng dịch vụ công Bộ Công an để bắt đầu thực hiện thủ tục.",
+          "tts": "Đăng nhập vào Cổng dịch vụ công Bộ Công an để bắt đầu thực hiện thủ tục.",
+          "link": "https://dichvucong.bocongan.gov.vn/",
+          "image": "dataset/xuatnhapcanh/images/qr_code.png",
+          "type": "say",
+          "wait_for_user": true
+        },
+        "2": {
+          "name": "Bước 2: Thực hiện đăng nhập \n \n -Trên máy tính: Nhấn vào nút Đăng nhập ở góc trên bên phải của trang web.\n \n -Trên điện thoại: Nhấn vào biểu tượng 3 gạch ngang ở góc trên bên trái, sau đó chọn Đăng nhập. \n \n Chọn biểu tượng hình VNeID \"Tài khoản Dịnh danh điện tử cấp bởi Bộ Công an dành cho công dân\"",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "3": {
+          "name": "Bước 3: Điền thông tin cá nhận bao gồm số đinh danh cá nhân và mật khẩu. Bấm nút Đăng nhập \n \n Để thuận tiện, bạn tiếp tục bấm vào nút SMS để nhận mã OTP, bấm XÁC NHẬN \n \n Bấm vào ô vuông và nhập mã OTP nhận được, bấm XÁC NHẬN",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "4": {
+          "name": "Bước 4: Chọn Thủ tục hành chính \n \n - Trên máy tính: Nhấn vào mục Thủ tục hành chính ở thanh menu giữa, \n \n - Trên điện thoại: Nhấn vào biểu tượng 3 gạch ngang ở góc trên bên trái, sau đó chọn Thủ tục hành chính.",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "5": {
+          "name": "Bước 5: Chọn lĩnh vực thực hiện \n \n Ở mục Lĩnh vực thủ tục hành chính (Ô chọn lĩnh vực): Chọn lĩnh vực Quản lý xuất nhập cảnh \n \n Bấm nút Tìm kiếm",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "6": {
+          "name": "Bước 6: Chọn thủ tục thực kiện \n \n Kéo xuống và bấm vào thủ tục \"Cấp hộ chiếu phổ thông ở trong nước (thực hiện tại cấp tỉnh)\" \n \n Tiếp tục chọn vào nút NỘP HỒ SƠ",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "7": {
+          "name": "Bước 7: Chọn cơ quan giải quyết \n \n Bấm vào mục phía dưới \"Chọn cơ quan giải quyết hồ sơ\" và chọn Công an tỉnh Đắk Lắk \n \n Tiếp tục bấm vào mục phía dưới \"Trường hợp giải quyết\" và chọn Cấp hộ chiếu phổ thông cho người từ đủ 14 tuổi trở lên \n \n Bấm nút ĐỒNG Ý VÀ TIẾP TỤC",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "8": {
+          "name": "Bước 8: Bấm vào nút Tải ảnh và chọn ảnh chân dung của bạn \n \n Ảnh chân dung phải đáp ứng các yêu cầu về kích thước và chất lượng. Bạn có thể chụp ảnh trực tiếp hoặc tải lên từ thiết bị của mình.",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        },
+        "9": {
+          "name": "Bước 9: Tìm đến và bấm vào mục phía dưới \"Nơi sinh (Theo giấy khai sinh)\" và chọn Nơi theo Giấy khai sinh của bạn",
+          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "link": null,
+          "image": null,
+          "type": "say",
+          "wait_for_user": true
+        }
+      }
+    },
+    "cap_moi_duoi_14": {
+      "name": "Cấp hộ chiếu lần đầu cho công dân dưới 14 tuổi",
+      "description": "Hiện tại hệ thống chưa hỗ trợ cấp hộ chiếu lần đầu cho công dân dưới 14 tuổi. Vui lòng liên hệ cơ quan chức năng để được hướng dẫn cụ thể.",
+      "steps": {}
+    },
+    "cap_lai_het_han": {
+      "name": "Cấp lại hộ chiếu do hết hạn",
+      "description": "Hiện tại hệ thống chưa hỗ trợ cấp hộ chiếu do hết hạn. Vui lòng liên hệ cơ quan chức năng để được hướng dẫn cụ thể.",
+      "steps": {}
+    },
+    "cap_lai_mat": {
+      "name": "Cấp lại hộ chiếu do bị mất",
+      "description": "Hiện tại hệ thống chưa hỗ trợ cấp hộ chiếu do bị mất. Vui lòng liên hệ cơ quan chức năng để được hướng dẫn cụ thể.",
+      "steps": {}
+    },
+    "cap_lai_hu_hong": {
+      "name": "Cấp lại hộ chiếu do hư hỏng, thay đổi thông tin",
+      "description": "Hiện tại hệ thống chưa hỗ trợ cấp đổi hộ chiếu. Vui lòng liên hệ cơ quan chức năng để được hướng dẫn cụ thể.",
+      "steps": {}
+    }
+  }
+}

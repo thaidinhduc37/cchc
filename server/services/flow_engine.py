@@ -1,4 +1,4 @@
-# flow_engine.py
+# ✅ flow_engine chuẩn, giữ nguyên logic gốc và chỉ bổ sung đúng hàm jump_to_step_by_description
 
 import json
 from pathlib import Path
@@ -18,6 +18,9 @@ class FlowEngine:
 
     def handle_user_input(self, user_id, message):
         message = message.lower().strip()
+
+        if message in ["kết thúc", "thoát", "dừng"]:
+            return self.reset(user_id)
         if message in ["xong", "tiếp", "tiếp tục"]:
             return self.next_step(user_id)
         elif message in ["quay lại", "lùi lại"]:
@@ -26,6 +29,9 @@ class FlowEngine:
             flow_id = self.user_progress.get(user_id, {}).get("flow_id")
             return self.start_flow(user_id, flow_id) if flow_id else {"error": "Chưa có flow để bắt đầu lại."}
         else:
+            jump_result = self.jump_to_step_by_description(user_id, message)
+            if jump_result:
+                return jump_result
             return {"message": f"🤖 Không rõ yêu cầu: '{message}'"}
 
     def start_flow(self, user_id, flow_id):
@@ -73,6 +79,19 @@ class FlowEngine:
         if user_id in self.user_progress:
             del self.user_progress[user_id]
         return {"message": "🔄 Đã reset trạng thái flow cho user."}
+
+    def jump_to_step_by_description(self, user_id, message):
+        state = self.user_progress.get(user_id)
+        if not state:
+            return None
+        flow_id = state.get("flow_id")
+        steps = self.flows.get(flow_id, {}).get("steps", {})
+        lowered = message.lower()
+        for step_index, step in steps.items():
+            if step.get("description") and step["description"].lower() in lowered:
+                self.user_progress[user_id]["step_index"] = int(step_index)
+                return self.get_current_step(user_id)
+        return None
 
 
 # Khởi tạo engine dùng file flow mẫu

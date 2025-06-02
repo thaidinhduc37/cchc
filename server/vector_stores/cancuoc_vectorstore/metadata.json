@@ -1,7 +1,0 @@
-{
-  "domain": "cancuoc",
-  "num_documents": 160,
-  "created_at": "2025-06-01 11:08:36.941421",
-  "save_path": "vector_stores\\cancuoc_vectorstore",
-  "embedding_model": "keepitreal/vietnamese-sbert"
-}

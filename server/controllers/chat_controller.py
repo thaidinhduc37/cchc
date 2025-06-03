@@ -1,6 +1,6 @@
 # controllers/chat_controller.py - Tối ưu tập trung Flow
 
-from services.flow_engine import flow_engine
+from services.flow_engine import FlowEngine
 from services.unified_processor import process_user_query
 from datetime import datetime
 import json
@@ -10,7 +10,16 @@ logger = logging.getLogger(__name__)
 
 class ChatController:
     def __init__(self):
-        self.flow_engine = flow_engine
+        # Tạo instance FlowEngine trong constructor
+        try:
+            self.flow_engine = FlowEngine("dataset/xuatnhapcanh/flow.json")
+            logger.info("✅ Flow engine initialized in ChatController")
+        except Exception as e:
+            logger.error(f"❌ Flow engine init failed: {e}")
+            self.flow_engine = FlowEngine("nonexistent.json")  # Fallback
+            
+        self.user_sessions = {}
+        self._load_question_tree()
         self.user_sessions = {}
         self._load_question_tree()
 

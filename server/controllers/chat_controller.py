@@ -423,14 +423,14 @@ class ChatController:
             
             # Media and resources
             step_image = step_data.get("image")
-            print(f"🖼️ Step image from JSON: {step_image}")
+            
             if step_image:
                 # Convert relative path to full URL
                 if step_image.startswith("dataset/"):
                     # TODO: Make base_url configurable via environment variable
                     base_url = "http://localhost:8000"
                     guide_data["guide_image"] = f"{base_url}/static/{step_image}"
-                    print(f"🌐 Full image URL: {guide_data['guide_image']}")
+                   
                 else:
                     guide_data["guide_image"] = step_image
             

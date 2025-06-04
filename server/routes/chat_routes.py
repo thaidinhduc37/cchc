@@ -78,13 +78,11 @@ def ask():
 # THAY ĐỔI ROUTE PATTERN
 @chat_routes.route("/static/dataset/<path:filepath>")
 def serve_static(filepath):
-    print(f"🔍 STATIC REQUEST: /static/dataset/{filepath}")
-    
+      
     try:
         # Build path từ dataset folder
         full_path = os.path.join(os.getcwd(), "dataset", filepath)
-        print(f"📁 FULL PATH: {full_path}")
-        print(f"📂 EXISTS: {os.path.exists(full_path)}")
+        
         
         if os.path.exists(full_path):
             directory = os.path.dirname(full_path)

@@ -3,8 +3,7 @@ from flask_cors import CORS  # ✅ THÊM DÒNG NÀY
 from routes.chat_routes import chat_routes
 from routes.assistant_routes import assistant_routes
 
-
-app = Flask(__name__, static_folder=None)
+app = Flask(__name__)
 CORS(app)  # ✅ Cho phép frontend gọi từ http://localhost:3000
 
 app.register_blueprint(chat_routes)

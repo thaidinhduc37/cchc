@@ -5,6 +5,7 @@ import json
 import pandas as pd
 import logging
 import asyncio
+import difflib
 from datetime import datetime
 from utils.response_formatter import format_response
 
@@ -76,37 +77,97 @@ async def initialize_rag_engine(force_rebuild=False):
         return False
 
 # ===== SIMPLE RAG FALLBACK =====
+# Thay thế function simple_excel_search trong unified_processor.py
+
+# services/unified_processor.py
+
 def simple_excel_search(user_input: str, domain: str = "xuatnhapcanh") -> str:
-    """Tìm kiếm đơn giản trong file Excel question.xlsx"""
+    """
+    Tìm kiếm thông minh trong file Excel question.xlsx.
+    CHẶN các flow options để không conflict với flow logic, TRỪ "tôi đã rõ".
+    """
     try:
+        # CHẶN flow options - không search trong Excel
+        flow_options = [
+            "cấp hộ chiếu lần đầu", "cấp lại/đổi hộ chiếu",
+            "dưới 14 tuổi", "từ đủ 14 tuổi trở lên", "hộ chiếu hết hạn",
+            "bị mất hộ chiếu", "bị hư hỏng, thay đổi thông tin"
+        ]
+        
+        user_lower = user_input.lower().strip()
+        
+        # Bỏ chặn "tôi đã rõ" để không xung đột với flow
+        if user_lower != "tôi đã rõ" and any(option in user_lower for option in flow_options):
+            logger.info(f"🚫 Blocked flow option from Excel search: {user_input}")
+            return None
+        
+        # CHẶN CÁC CÂU NGẮN NHƯNG GIỐNG FLOW COMMANDS - TRỪ "TÔI ĐÃ RÕ"
+        if len(user_lower.split()) <= 3 and user_lower != "tôi đã rõ":
+            short_blocked = ["đầu", "lại", "hạn", "mất", "hỏng", "tiếp", "lùi"]
+            if any(word in user_lower for word in short_blocked):
+                logger.info(f"🚫 BLOCKED potential flow command: '{user_input}'")
+                return None
+        
         excel_path = f"dataset/{domain}/question.xlsx"
         if not os.path.exists(excel_path):
             return None
-            
+
         df = pd.read_excel(excel_path)
         df.columns = df.columns.str.lower()
-        
         if 'question' not in df.columns or 'answer' not in df.columns:
             return None
-            
+
         questions = df["question"].fillna("").astype(str).tolist()
         answers = df["answer"].fillna("").astype(str).tolist()
-        
-        # Simple keyword matching
-        user_lower = user_input.lower()
+
+        user_words = set([w for w in user_lower.split() if len(w) > 2])
+
+        # Tạo list các score cho từng câu hỏi
+        scores = []
         for i, question in enumerate(questions):
-            if any(word in question.lower() for word in user_lower.split() if len(word) > 2):
-                if i < len(answers) and answers[i].strip():
+            q_lower = question.lower()
+            q_words = set([w for w in q_lower.split() if len(w) > 2])
+            if not q_words:
+                continue
+            # Tính tỷ lệ từ trùng
+            common = user_words & q_words
+            keyword_score = len(common) / max(len(q_words), len(user_words))
+            seq_ratio = difflib.SequenceMatcher(None, user_lower, q_lower).ratio()
+            total_score = keyword_score * 0.7 + seq_ratio * 0.3
+            scores.append((total_score, i))
+
+        # Sắp xếp giảm dần theo score
+        scores.sort(reverse=True)
+
+        # Thử từng threshold từ cao xuống thấp
+        for threshold in [0.9, 0.8, 0.7, 0.6, 0.5]:
+            for score, i in scores:
+                if score >= threshold and i < len(answers) and answers[i].strip():
+                    logger.info(f"✅ Excel search found answer (score: {score:.2f})")
                     return answers[i]
-        
+
         return None
     except Exception as e:
         logger.error(f"Error in simple_excel_search: {e}")
         return None
 
 def simple_json_search(user_input: str, domain: str = "xuatnhapcanh") -> str:
-    """Tìm kiếm đơn giản trong responses.json"""
+    """Tìm kiếm đơn giản trong responses.json - CŨNG CHẶN FLOW TRỪ "TÔI ĐÃ RÕ" """
     try:
+        # CHẶN FLOW PHRASES TƯƠNG TỰ - TRỪ "TÔI ĐÃ RÕ"
+        flow_blocked_phrases = [
+            "cấp hộ chiếu lần đầu", "cấp lại hộ chiếu", "đổi hộ chiếu",
+            "dưới 14 tuổi", "từ đủ 14 tuổi", "hộ chiếu hết hạn", "bị mất hộ chiếu",
+            "tiếp tục", "quay lại", "thoát hướng dẫn"
+        ]
+        
+        user_lower = user_input.lower().strip()
+        
+        # Bỏ chặn "tôi đã rõ"
+        if user_lower != "tôi đã rõ" and any(phrase in user_lower for phrase in flow_blocked_phrases):
+            logger.info(f"🚫 BLOCKED flow phrase in JSON search: '{user_input}'")
+            return None
+            
         json_path = f"dataset/{domain}/responses.json"
         if not os.path.exists(json_path):
             return None
@@ -115,7 +176,6 @@ def simple_json_search(user_input: str, domain: str = "xuatnhapcanh") -> str:
             data = json.load(f)
             
         entries = data.get("entries", [])
-        user_lower = user_input.lower()
         
         for entry in entries:
             keywords = entry.get("keywords", [])
@@ -195,9 +255,12 @@ def sync_query_rag_engine(user_input: str, domain: str = "xuatnhapcanh") -> dict
 
 # ===== GREETING & FILTERS =====
 def handle_greeting(user_input: str) -> str:
-    """Xử lý chào hỏi"""
+    # Chỉ greeting khi là câu chào ngắn gọn, không dính các câu hỏi thực sự
     greeting_words = ["chào", "hi", "hello", "xin chào", "good morning"]
-    if any(word in user_input.lower() for word in greeting_words):
+    # Xoá khoảng trắng đầu/cuối, lower
+    msg = user_input.strip().lower()
+    # Nếu đúng greeting (độ dài < 20 và chứa greeting word)
+    if any(word in msg for word in greeting_words) and len(msg.split()) <= 4:
         return (
             "Xin chào! Tôi là trợ lý hỗ trợ thông tin về thủ tục hành chính.\n\n"
             "Tôi có thể giúp bạn:\n"
@@ -221,14 +284,15 @@ def handle_sensitive_content(user_input: str) -> str:
 # ===== MAIN PROCESSOR - ENHANCED =====
 def process_user_query(user_input: str, user_id: str, domain: str = None) -> dict:
     """
-    Xử lý câu hỏi người dùng - ENHANCED với RAG
+    Xử lý câu hỏi người dùng - ENHANCED với RAG và Flow Check
     
     PRIORITY ORDER:
+    0. **FLOW STATE CHECK (NEW)** - Kiểm tra user có đang trong flow không
     1. Greeting handling
     2. Sensitive content filter  
     3. Excel search (highest priority)
     4. JSON responses search
-    5. **RAG engine query (NEW - before fallback)**
+    5. RAG engine query
     6. Fallback message
     """
     
@@ -240,29 +304,57 @@ def process_user_query(user_input: str, user_id: str, domain: str = None) -> dic
     
     logger.info(f"Processing query: '{user_input[:50]}...' for domain: {domain}")
 
-    # 1. Xử lý chào hỏi
+    # ===== 0. FLOW STATE CHECK =====
+    # Kiểm tra user có đang trong flow không - nếu có thì KHÔNG xử lý bình thường
+    try:
+        # Import flow_engine để check state
+        from services.flow_engine import flow_engine
+        
+        # Kiểm tra user có đang trong step flow không
+        if flow_engine.is_in_flow(user_id):
+            logger.info(f"🔄 User {user_id} is in active flow - SKIPPING unified processor")
+            return format_response(
+                "🤖 Bạn đang trong hướng dẫn từng bước. Vui lòng sử dụng các nút điều khiển hoặc nhắn 'Thoát hướng dẫn' để kết thúc.",
+                source="flow_redirect",
+                metadata={"reason": "user_in_step_flow"}
+            )
+        
+        # TODO: Kiểm tra user có đang trong question flow không
+        # Cần access tới chat_controller session để check mode
+        # Tạm thời skip vì cần refactor để avoid circular import
+        
+        logger.debug(f"✅ User {user_id} not in flow - proceeding with normal processing")
+        
+    except ImportError:
+        logger.warning("⚠️ Could not import flow_engine - proceeding without flow check")
+    except Exception as e:
+        logger.error(f"❌ Error checking flow state: {e}")
+        # Continue với processing bình thường nếu có lỗi
+
+
+    # ===== 2. Xử lý chào hỏi =====
     greeting_response = handle_greeting(user_input)
     if greeting_response:
         return format_response(greeting_response, source="greeting")
 
-    # 2. Chặn nội dung nhạy cảm  
+    # ===== 3. Chặn nội dung nhạy cảm =====
     sensitive_response = handle_sensitive_content(user_input)
     if sensitive_response:
         return format_response(sensitive_response, source="filter")
 
-    # 3. Tìm kiếm trong Excel (ưu tiên cao nhất)
+    # ===== 4. Tìm kiếm trong Excel (ưu tiên cao nhất) =====
     excel_result = simple_excel_search(user_input, domain)
     if excel_result:
         logger.info(f"✅ Found answer in Excel for: {user_input[:30]}")
         return format_response(excel_result, source="excel", metadata={"domain": domain})
 
-    # 4. Tìm kiếm trong JSON responses
+    # ===== 5. Tìm kiếm trong JSON responses =====
     json_result = simple_json_search(user_input, domain)
     if json_result:
         logger.info(f"✅ Found answer in JSON for: {user_input[:30]}")
         return format_response(json_result, source="json", metadata={"domain": domain})
 
-    # 5. **NEW: RAG Engine Query**
+    # ===== 6. RAG Engine Query =====
     if RAG_AVAILABLE and get_rag_engine():
         logger.info(f"🤖 Trying RAG engine for: {user_input[:30]}")
         
@@ -294,7 +386,7 @@ def process_user_query(user_input: str, user_id: str, domain: str = None) -> dic
         else:
             logger.warning(f"⚠️ RAG engine failed: {rag_result.get('error', 'Unknown error')}")
 
-    # 6. Fallback - không tìm thấy anywhere
+    # ===== 7. Fallback - không tìm thấy anywhere =====
     fallback_message = (
         f"Xin lỗi, tôi chưa tìm thấy thông tin về '{user_input}'. "
         "Bạn có thể:\n"
@@ -305,6 +397,7 @@ def process_user_query(user_input: str, user_id: str, domain: str = None) -> dic
     
     logger.warning(f"❌ No answer found anywhere for: {user_input}")
     return format_response(fallback_message, source="fallback", metadata={"domain": domain})
+
 
 # ===== DOMAIN DETECTION (giữ nguyên) =====
 def detect_domain(user_input: str) -> str:

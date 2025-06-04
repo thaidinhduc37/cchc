@@ -1,0 +1,56 @@
+{
+    "entries": [
+      {
+        "field": "Cấp, quản lý thẻ Căn cước",
+        "procedure": "Cấp thẻ Căn cước cho người từ đủ 14 tuổi trở lên",
+        "keywords": ["đăng ký căn cước", "căn cước", "đủ 14 tuổi"],
+        "responses": [
+          "1. Bạn có thể nộp hồ sơ cấp mới Căn cước tại đây: <a href='https://example.com/cancuoc' target='_blank'>Xem chi tiết</a>",
+          "2. Hồ sơ bao gồm: CCCD cũ, giấy khai sinh (nếu chưa có CCCD trước đây).",
+          "3. Thời gian xử lý: 7-15 ngày làm việc"
+        ]
+      },
+      {
+        "field": "Cấp, quản lý thẻ Căn cước",
+        "procedure": "Cấp thẻ Căn cước cho người dưới 14 tuổi",
+        "keywords": [
+          "đăng ký căn cước",
+          "căn cước",
+          "dưới 14 tuổi",
+          "trẻ em",
+          "cấp căn cước cho trẻ"
+        ],
+        "responses": [
+          "1. Bạn có thể nộp hồ sơ cấp mới Căn cước tại đây: <a href='https://example.com/cancuoc' target='_blank'>Xem chi tiết</a>",
+          "2. Hồ sơ bao gồm: giấy khai sinh.",
+          "3. Thời gian xử lý: 7-15 ngày làm việc"
+        ]
+      },
+      {
+        "field": "Cấp, quản lý thẻ Căn cước",
+        "procedure": "Đổi thông tin trên Căn cước",
+        "keywords": [
+          "đổi thông tin căn cước",
+          "cập nhật căn cước",
+          "sửa thông tin căn cước"
+        ],
+        "responses": [
+          "Bạn cần đến cơ quan Công an cấp huyện hoặc Trung tâm hành chính công để làm thủ tục đổi thông tin trên Căn cước.",
+          "Hồ sơ cần chuẩn bị: Căn cước công dân cũ, giấy tờ chứng minh thông tin cần thay đổi (ví dụ: Giấy khai sinh, giấy chứng nhận kết hôn, v.v.).",
+          "Thời gian xử lý: 7-15 ngày làm việc."
+        ]
+      },
+      {
+        "field": "Cấp, quản lý thẻ Căn cước",
+        "procedure": "Cấp lại thẻ Căn cước",
+        "keywords": ["cấp lại căn cước", "làm lại căn cước", "mất căn cước"],
+        "responses": [
+          "Thủ tục câp lại Căn cước do mất:",
+          "1. Bạn có thể nộp hồ sơ cấp lại Căn cước tại đây: <a href='https://example.com/caplai-cancuoc' target='_blank'>Xem chi tiết</a>",
+          "2. Lưu ý: Khi làm lại thẻ Căn cước, bạn cần có giấy xác nhận mất CCCD từ công an phường/xã.",
+          "3. Thời gian xử lý: 7-15 ngày làm việc"
+        ]
+      }
+    ]
+  }
+  

@@ -1,4 +1,6 @@
-# services/flow_engine.py - Fixed version với jump by description
+# Copy toàn bộ nội dung này và REPLACE file services/flow_engine.py
+
+# services/flow_engine.py - Complete version với global instance
 
 import json
 import logging
@@ -25,10 +27,10 @@ class FlowEngine:
         return user_id in self.user_progress
 
     def handle_user_input(self, user_id, message):
-        """Xử lý input của user trong flow"""
+        """Xử lý input của user trong flow - ENHANCED"""
         message = message.lower().strip()
 
-        # Commands xử lý
+        # Commands xử lý cơ bản
         if message in ["kết thúc", "thoát", "dừng", "exit"]:
             return self.reset(user_id)
         elif message in ["xong", "tiếp", "tiếp tục", "next"]:
@@ -39,17 +41,152 @@ class FlowEngine:
             flow_id = self.user_progress.get(user_id, {}).get("flow_id")
             return self.start_flow(user_id, flow_id) if flow_id else {"error": "Chưa có flow để bắt đầu lại."}
         
-        # Thử nhảy đến step bằng description matching
+        # Thử nhảy đến step bằng description matching (ENHANCED)
         jump_result = self.jump_to_step_by_description(user_id, message)
         if jump_result:
             return jump_result
+        
+        # Thử nhảy bằng số bước
+        step_number_result = self.jump_to_step_by_number(user_id, message)
+        if step_number_result:
+            return step_number_result
             
-        # Không hiểu lệnh
+        # Không hiểu lệnh - return để chat_controller xử lý
         return {
-            "message": f"🤖 Tôi không hiểu '{message}'. Hãy dùng: 'tiếp tục', 'quay lại', hoặc 'kết thúc'",
+            "message": f"🤖 Tôi không hiểu '{message}'. Hãy dùng: 'tiếp tục', 'quay lại', hoặc mô tả bước muốn đến.",
             "step": self.get_current_step(user_id).get("step", {}),
-            "current": self.get_current_step(user_id).get("current", "?")
+            "current": self.get_current_step(user_id).get("current", "?"),
+            "unknown_command": True
         }
+
+    def jump_to_step_by_number(self, user_id, message):
+        """Nhảy đến step theo số"""
+        try:
+            # Tìm số trong message
+            import re
+            numbers = re.findall(r'\d+', message)
+            if not numbers:
+                return None
+            
+            target_step = int(numbers[0])
+            state = self.user_progress.get(user_id)
+            if not state:
+                return None
+                
+            flow_id = state.get("flow_id")
+            steps = self.flows.get(flow_id, {}).get("steps", {})
+            
+            # Kiểm tra step có tồn tại không
+            if str(target_step) in steps:
+                old_step = self.user_progress[user_id]["step_index"]
+                self.user_progress[user_id]["step_index"] = target_step
+                
+                logger.info(f"User {user_id} jumped from step {old_step} to step {target_step} by number")
+                
+                result = self.get_current_step(user_id)
+                result["jumped"] = True
+                result["jump_message"] = f"🎯 Đã chuyển đến bước {target_step}!"
+                return result
+                
+        except Exception as e:
+            logger.debug(f"Failed to parse step number: {e}")
+            
+        return None
+
+    def jump_to_step_by_description(self, user_id, message):
+        """
+        ENHANCED: Nhảy đến step khi user nhắn gần giống description/name
+        """
+        state = self.user_progress.get(user_id)
+        if not state:
+            return None
+            
+        flow_id = state.get("flow_id")
+        steps = self.flows.get(flow_id, {}).get("steps", {})
+        
+        if not steps:
+            return None
+            
+        message_lower = message.lower()
+        best_matches = []
+        
+        # Tìm tất cả step có score cao
+        for step_index, step in steps.items():
+            step_description = step.get("description", "").lower()
+            step_name = step.get("name", "").lower()
+            
+            # Combine description + name for better matching
+            combined_text = f"{step_description} {step_name}"
+            
+            if not combined_text.strip():
+                continue
+            
+            # Multiple scoring methods
+            scores = []
+            
+            # 1. Partial ratio với description
+            if step_description:
+                scores.append(fuzz.partial_ratio(message_lower, step_description))
+            
+            # 2. Partial ratio với name
+            if step_name:
+                scores.append(fuzz.partial_ratio(message_lower, step_name))
+            
+            # 3. Token set ratio với combined text
+            scores.append(fuzz.token_set_ratio(message_lower, combined_text))
+            
+            # 4. Keyword matching boost
+            keyword_bonus = 0
+            message_words = [w for w in message_lower.split() if len(w) > 2]
+            for word in message_words:
+                if word in combined_text:
+                    keyword_bonus += 15
+            
+            # 5. Specific keyword patterns cho flow xuất nhập cảnh
+            flow_keywords = {
+                "đăng nhập": ["đăng nhập", "login", "tài khoản"],
+                "thủ tục": ["thủ tục", "hồ sơ", "giấy tờ"],
+                "chọn": ["chọn", "lựa chọn", "bấm"],
+                "cơ quan": ["cơ quan", "công an", "bộ"],
+                "ảnh": ["ảnh", "chụp", "tải ảnh", "upload"],
+                "nơi sinh": ["nơi sinh", "khai sinh", "sinh"]
+            }
+            
+            for pattern, keywords in flow_keywords.items():
+                if any(kw in message_lower for kw in keywords) and pattern in combined_text:
+                    keyword_bonus += 25
+            
+            # Lấy score cao nhất + bonus
+            max_score = max(scores) if scores else 0
+            final_score = max_score + keyword_bonus
+            
+            if final_score >= 50:  # Threshold thấp hơn để dễ match
+                best_matches.append({
+                    'step_index': step_index,
+                    'step': step,
+                    'score': final_score,
+                    'name': step.get('name', ''),
+                    'description': step.get('description', '')
+                })
+        
+        # Sort theo score và lấy match tốt nhất
+        best_matches.sort(key=lambda x: x['score'], reverse=True)
+        
+        if best_matches and best_matches[0]['score'] >= 60:  # Chỉ accept score tốt
+            best_match = best_matches[0]
+            
+            old_step = self.user_progress[user_id]["step_index"]
+            new_step = int(best_match['step_index'])
+            self.user_progress[user_id]["step_index"] = new_step
+            
+            logger.info(f"User {user_id} jumped from step {old_step} to step {new_step} (score: {best_match['score']})")
+            
+            result = self.get_current_step(user_id)
+            result["jumped"] = True
+            result["jump_message"] = f"🎯 Tôi hiểu bạn muốn đến bước {new_step}: {best_match['name'][:50]}..."
+            return result
+        
+        return None
 
     def start_flow(self, user_id, flow_id):
         """Bắt đầu flow mới"""
@@ -116,67 +253,6 @@ class FlowEngine:
             
         return self.get_current_step(user_id)
 
-    def jump_to_step_by_description(self, user_id, message):
-        """
-        QUAN TRỌNG: Nhảy đến step khi user nhắn gần giống description
-        """
-        state = self.user_progress.get(user_id)
-        if not state:
-            return None
-            
-        flow_id = state.get("flow_id")
-        steps = self.flows.get(flow_id, {}).get("steps", {})
-        
-        if not steps:
-            return None
-            
-        message_lower = message.lower()
-        best_match = None
-        best_score = 0
-        best_step_index = None
-        
-        # Tìm step có description gần nhất
-        for step_index, step in steps.items():
-            step_description = step.get("description", "").lower()
-            step_name = step.get("name", "").lower()
-            
-            # Combine description + name for better matching
-            combined_text = f"{step_description} {step_name}"
-            
-            if not combined_text.strip():
-                continue
-                
-            # Fuzzy matching với description
-            desc_score = fuzz.partial_ratio(message_lower, step_description)
-            name_score = fuzz.partial_ratio(message_lower, step_name)
-            combined_score = fuzz.partial_ratio(message_lower, combined_text)
-            
-            # Lấy score cao nhất
-            max_score = max(desc_score, name_score, combined_score)
-            
-            # Bonus nếu có keyword match chính xác
-            if any(word in combined_text for word in message_lower.split() if len(word) > 3):
-                max_score += 20
-                
-            if max_score > best_score and max_score >= 60:  # Threshold 60%
-                best_score = max_score
-                best_match = step
-                best_step_index = step_index
-        
-        # Nếu tìm thấy match tốt
-        if best_match and best_step_index:
-            old_step = self.user_progress[user_id]["step_index"]
-            self.user_progress[user_id]["step_index"] = int(best_step_index)
-            
-            logger.info(f"User {user_id} jumped from step {old_step} to step {best_step_index} (score: {best_score})")
-            
-            result = self.get_current_step(user_id)
-            result["jumped"] = True
-            result["jump_message"] = f"🎯 Tôi hiểu bạn muốn đến bước {best_step_index}!"
-            return result
-        
-        return None
-
     def reset(self, user_id):
         """Reset flow cho user"""
         if user_id in self.user_progress:
@@ -188,3 +264,13 @@ class FlowEngine:
             "done": True, 
             "message": "🔄 Đã kết thúc hướng dẫn. Bạn có thể bắt đầu lại bất cứ lúc nào!"
         }
+
+# ===== GLOBAL INSTANCE =====
+# Tạo instance global để import
+try:
+    flow_engine = FlowEngine("dataset/xuatnhapcanh/flow.json")
+    print("✅ Flow engine initialized successfully")
+except Exception as e:
+    print(f"⚠️ Flow engine initialization failed: {e}")
+    # Tạo fallback instance
+    flow_engine = FlowEngine("nonexistent.json")  # Will create empty flows

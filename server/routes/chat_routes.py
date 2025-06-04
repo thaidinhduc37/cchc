@@ -1,8 +1,9 @@
 # server/routes/chat_routes.py
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify , send_from_directory
 from controllers.chat_controller import ChatController
 from utils.response_formatter import format_response  # ✅ Import thiếu
+import os
 import logging
 from datetime import datetime
 
@@ -54,7 +55,9 @@ def ask():
                     **{k: v for k, v in result.items() if k in [
                         'buttons', 'options', 'show_flow_button', 'button_label',
                         'step_mode', 'flow_id', 'step_index', 'total_steps',
-                        'wait_for_user', 'done', 'tts', 'image', 'link'
+                        'wait_for_user', 'done', 'tts', 'image', 'link',
+                        'current_step', 'guide_image', 'step_info',  # ✅ THÊM 3 FIELD NÀY
+                        'flow_data', 'navigation', 'progress_percent'
                     ]}
                 })
 
@@ -71,3 +74,25 @@ def ask():
             "status": "error",
             "details": str(e)
         }), 500
+
+# THAY ĐỔI ROUTE PATTERN
+@chat_routes.route("/static/dataset/<path:filepath>")
+def serve_static(filepath):
+    print(f"🔍 STATIC REQUEST: /static/dataset/{filepath}")
+    
+    try:
+        # Build path từ dataset folder
+        full_path = os.path.join(os.getcwd(), "dataset", filepath)
+        print(f"📁 FULL PATH: {full_path}")
+        print(f"📂 EXISTS: {os.path.exists(full_path)}")
+        
+        if os.path.exists(full_path):
+            directory = os.path.dirname(full_path)
+            filename = os.path.basename(full_path)
+            return send_from_directory(directory, filename)
+        else:
+            return "File not found", 404
+            
+    except Exception as e:
+        print(f"❌ ERROR: {e}")
+        return f"Error: {e}", 500

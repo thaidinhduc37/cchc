@@ -1,0 +1,40 @@
+cchc/
+├── server/
+│   ├── app.py                       # Điểm vào chính của ứng dụng
+│   ├── config/                      # Cấu hình ứng dụng
+│   │   ├── settings.py              # Cấu hình chung
+│   │   └── ollama.py               # Cấu hình Ollama
+│   ├── controllers/                 # Xử lý logic nghiệp vụ
+│   │   ├── chat_controller.py      # Xử lý chat thông thường
+│   │   └── assistant_controller.py # Xử lý trợ lý ảo
+│   ├── dataset/                    # Dữ liệu theo từng lĩnh vực
+│   │   ├── cancuoc/                
+│   │   │   ├── flow.json          
+│   │   │   └── data_files/         # Chứa PDF, DOCX, XLSX, TXT
+│   │   ├── honnhan/
+│   │   └── ...                    
+│   ├── routes/                      # Định tuyến API
+│   │   ├── chat_routes.py          # API chat
+│   │   └── assistant_routes.py     # API trợ lý ảo
+│   ├── services/                   # Các dịch vụ
+│   │   ├── ollama_service.py       # Tương tác với Ollama
+│   │   ├── vector_db.py            # Xử lý vector database
+│   │   ├── document_processor/     # Xử lý tài liệu
+│   │   │   ├── __init__.py         
+│   │   │   ├── pdf_processor.py   
+│   │   │   ├── docx_processor.py  
+│   │   │   ├── xlsx_processor.py  
+│   │   │   ├── json_processor.py  
+│   │   │   └── txt_processor.py   
+│   │   ├── speech_services/        # Dịch vụ âm thanh
+│   │   │   ├── text_to_speech.py  
+│   │   │   └── speech_to_text.py  
+│   │   └── flow_engine.py          # Xử lý luồng hướng dẫn
+│   ├── utils/                      # Công cụ tiện ích
+│   │   ├── context_manager.py     # Quản lý ngữ cảnh hội thoại
+│   │   ├── prompt_builder.py      # Tạo prompt cho LLM
+│   │   └── response_formatter.py  # Định dạng phản hồi
+│   └── vector_db/                 # Thư mục chứa vector database
+│       └── embeddings/            # Lưu trữ các embedding
+├── client/                        # Front-end (nếu có)
+└── requirements.txt              # Cấu hình thư viện

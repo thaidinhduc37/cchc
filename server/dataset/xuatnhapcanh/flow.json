@@ -64,7 +64,7 @@
       "steps": {
         "1": {
           "name": "Bước 1: Truy cập Cổng dịch vụ công Bộ Công an bằng cách: \n \n- Trên máy tính: Mở trình duyệt web và truy cập vào địa chỉ https://dichvucong.bocongan.gov.vn/\n \n- Trên điện thoại: Mở Trình duyệt Goolge/Chrome/Safari,... và truy cập vào địa chỉ https://dichvucong.bocongan.gov.vn/\n \n Hoặc sử dụng Zalo, ứng dụng quét mã QR để quét mã QR bên cạnh",
-          "description": "Đăng nhập vào Cổng dịch vụ công Bộ Công an để bắt đầu thực hiện thủ tục.",
+          "description": "truy cập dịch vụ công",
           "tts": "Đăng nhập vào Cổng dịch vụ công Bộ Công an để bắt đầu thực hiện thủ tục.",
           "link": "https://dichvucong.bocongan.gov.vn/",
           "image": "dataset/xuatnhapcanh/images/qr_code.png",
@@ -73,19 +73,19 @@
         },
         "2": {
           "name": "Bước 2: Thực hiện đăng nhập \n \n -Trên máy tính: Nhấn vào nút Đăng nhập ở góc trên bên phải của trang web.\n \n -Trên điện thoại: Nhấn vào biểu tượng 3 gạch ngang ở góc trên bên trái, sau đó chọn Đăng nhập. \n \n Chọn biểu tượng hình VNeID \"Tài khoản Dịnh danh điện tử cấp bởi Bộ Công an dành cho công dân\"",
-          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "description": "đăng nhập",
           "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
           "link": null,
-          "image": null,
+          "image": "dataset/xuatnhapcanh/images/dangnhap.png",
           "type": "say",
           "wait_for_user": true
         },
         "3": {
           "name": "Bước 3: Điền thông tin cá nhận bao gồm số đinh danh cá nhân và mật khẩu. Bấm nút Đăng nhập \n \n Để thuận tiện, bạn tiếp tục bấm vào nút SMS để nhận mã OTP, bấm XÁC NHẬN \n \n Bấm vào ô vuông và nhập mã OTP nhận được, bấm XÁC NHẬN",
-          "description": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
+          "description": "đăng nhập bằng vneid",
           "tts": "Thực hiện các thủ tục đăng nhập vào Cổng dịch vụ công Bộ Công an.",
           "link": null,
-          "image": null,
+          "image": "dataset/xuatnhapcanh/images/dangnhap_vneid.png",
           "type": "say",
           "wait_for_user": true
         },

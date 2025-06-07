@@ -1,26 +1,19 @@
-# services/unified_processor.py - Enhanced với RAG Lightweight
+# services/unified_processor.py - OPTIMIZED with RAG Integration
 
 import os
-import json
 import pandas as pd
+import json
 import logging
 import asyncio
-import difflib
 from datetime import datetime
 from utils.response_formatter import format_response
 
-# ===== RAG INTEGRATION =====
+# ===== VECTOR RAG INTEGRATION =====
 try:
-    from .vector_rag.lightweight_rag_engine import LightweightRAGEngine, create_rag_engine
-    from .vector_rag.lightweight_config import SYSTEM_CONFIG
+    from services.vector_rag.rag_engine import RAGEngine
     RAG_AVAILABLE = True
-    print("✅ RAG components loaded successfully")
-except ImportError as e:
+except ImportError:
     RAG_AVAILABLE = False
-    print(f"⚠️ RAG components not available: {e}")
-except Exception as e:
-    RAG_AVAILABLE = False
-    print(f"⚠️ RAG initialization error: {e}")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
@@ -35,204 +28,319 @@ def get_rag_engine():
     global _global_rag_engine
     return _global_rag_engine
 
-async def initialize_rag_engine(force_rebuild=False):
-    """Initialize RAG engine globally"""
+async def initialize_rag_engine(domain: str = "xuatnhapcanh"):
+    """Initialize RAG Engine - Simplified"""
     global _global_rag_engine, _rag_initialization_attempted
     
     if not RAG_AVAILABLE:
-        logger.warning("⚠️ RAG not available, skipping initialization")
+        logger.warning("⚠️ RAG Engine not available")
         return False
     
-    if _global_rag_engine and not force_rebuild:
-        logger.info("✅ RAG engine already initialized")
+    if _global_rag_engine and _global_rag_engine.is_initialized:
+        logger.info("✅ RAG Engine already initialized")
         return True
     
-    if _rag_initialization_attempted and not force_rebuild:
-        logger.warning("⚠️ RAG initialization already attempted and failed")
+    if _rag_initialization_attempted:
+        logger.warning("⚠️ RAG initialization already attempted")
         return False
     
     _rag_initialization_attempted = True
     
     try:
-        logger.info("🚀 Initializing RAG engine...")
+        logger.info("🚀 Initializing RAG Engine...")
+        _global_rag_engine = RAGEngine()
         
-        # Create RAG engine
-        gemini_key = os.getenv('GEMINI_API_KEY')
-        _global_rag_engine = create_rag_engine(gemini_api_key=gemini_key)
+        # Initialize with timeout
+        result = await asyncio.wait_for(
+            _global_rag_engine.initialize(force_rebuild=False),
+            timeout=120.0
+        )
         
-        # Initialize system
-        init_result = await _global_rag_engine.initialize_system(force_rebuild=force_rebuild)
-        
-        if init_result['success']:
-            logger.info(f"✅ RAG engine initialized: {init_result['message']}")
+        if result.get('success', False):
+            stats = _global_rag_engine.get_stats()
+            docs_count = stats.get('components', {}).get('vector_store', {}).get('total_documents', 0)
+            logger.info(f"✅ RAG Engine initialized: {docs_count} docs")
             return True
         else:
-            logger.error(f"❌ RAG initialization failed: {init_result['message']}")
+            logger.error(f"❌ RAG initialization failed: {result.get('message', 'Unknown')}")
             _global_rag_engine = None
             return False
             
     except Exception as e:
-        logger.error(f"❌ RAG engine initialization error: {e}")
+        logger.error(f"❌ RAG initialization error: {e}")
         _global_rag_engine = None
         return False
 
-# ===== SIMPLE RAG FALLBACK =====
-# Thay thế function simple_excel_search trong unified_processor.py
-
-# services/unified_processor.py
-
-def simple_excel_search(user_input: str, domain: str = "xuatnhapcanh") -> str:
-    """
-    Tìm kiếm thông minh trong file Excel question.xlsx.
-    CHẶN các flow options để không conflict với flow logic, TRỪ "tôi đã rõ".
-    """
+# ===== OPTIMIZED EXCEL + JSON SEARCH =====
+def smart_qa_search(user_input: str, domain: str = "xuatnhapcanh") -> str:
+    """Smart Q&A search - Excel first, then JSON fallback"""
     try:
-        # CHẶN flow options - không search trong Excel
-        flow_options = [
-            "cấp hộ chiếu lần đầu", "cấp lại/đổi hộ chiếu",
-            "dưới 14 tuổi", "từ đủ 14 tuổi trở lên", "hộ chiếu hết hạn",
-            "bị mất hộ chiếu", "bị hư hỏng, thay đổi thông tin"
-        ]
+        logger.info(f"📊 Smart search: '{user_input[:30]}...'")
         
-        user_lower = user_input.lower().strip()
+        # Step 1: Try Excel first
+        excel_result = _search_excel_qa(user_input, domain)
+        if excel_result:
+            logger.info("✅ Found answer in Excel")
+            return excel_result
         
-        # Bỏ chặn "tôi đã rõ" để không xung đột với flow
-        if user_lower != "tôi đã rõ" and any(option in user_lower for option in flow_options):
-            logger.info(f"🚫 Blocked flow option from Excel search: {user_input}")
-            return None
+        # Step 2: Try JSON fallback
+        json_result = _search_json_qa(user_input, domain)
+        if json_result:
+            logger.info("✅ Found answer in JSON")
+            return json_result
         
-        # CHẶN CÁC CÂU NGẮN NHƯNG GIỐNG FLOW COMMANDS - TRỪ "TÔI ĐÃ RÕ"
-        if len(user_lower.split()) <= 3 and user_lower != "tôi đã rõ":
-            short_blocked = ["đầu", "lại", "hạn", "mất", "hỏng", "tiếp", "lùi"]
-            if any(word in user_lower for word in short_blocked):
-                logger.info(f"🚫 BLOCKED potential flow command: '{user_input}'")
-                return None
+        logger.info("❌ No answer in Excel/JSON")
+        return None
         
+    except Exception as e:
+        logger.error(f"❌ Smart search error: {e}")
+        return None
+
+def _search_excel_qa(user_input: str, domain: str) -> str:
+    """Search in Excel Q&A"""
+    try:
         excel_path = f"dataset/{domain}/question.xlsx"
+        
         if not os.path.exists(excel_path):
+            logger.debug(f"📊 Excel not found: {excel_path}")
             return None
 
         df = pd.read_excel(excel_path)
-        df.columns = df.columns.str.lower()
+        df.columns = df.columns.str.lower().str.strip()
+        
         if 'question' not in df.columns or 'answer' not in df.columns:
+            logger.warning(f"❌ Excel missing columns: {list(df.columns)}")
             return None
 
         questions = df["question"].fillna("").astype(str).tolist()
         answers = df["answer"].fillna("").astype(str).tolist()
-
-        user_words = set([w for w in user_lower.split() if len(w) > 2])
-
-        # Tạo list các score cho từng câu hỏi
-        scores = []
-        for i, question in enumerate(questions):
-            q_lower = question.lower()
-            q_words = set([w for w in q_lower.split() if len(w) > 2])
-            if not q_words:
-                continue
-            # Tính tỷ lệ từ trùng
-            common = user_words & q_words
-            keyword_score = len(common) / max(len(q_words), len(user_words))
-            seq_ratio = difflib.SequenceMatcher(None, user_lower, q_lower).ratio()
-            total_score = keyword_score * 0.7 + seq_ratio * 0.3
-            scores.append((total_score, i))
-
-        # Sắp xếp giảm dần theo score
-        scores.sort(reverse=True)
-
-        # Thử từng threshold từ cao xuống thấp
-        for threshold in [0.9, 0.8, 0.7, 0.6, 0.5]:
-            for score, i in scores:
-                if score >= threshold and i < len(answers) and answers[i].strip():
-                    logger.info(f"✅ Excel search found answer (score: {score:.2f})")
-                    return answers[i]
-
-        return None
+        
+        # Simple keyword matching with synonyms
+        best_match = _find_best_match(user_input, questions, answers)
+        
+        return best_match
+        
     except Exception as e:
-        logger.error(f"Error in simple_excel_search: {e}")
+        logger.error(f"❌ Excel search error: {e}")
         return None
 
-def simple_json_search(user_input: str, domain: str = "xuatnhapcanh") -> str:
-    """Tìm kiếm đơn giản trong responses.json - CŨNG CHẶN FLOW TRỪ "TÔI ĐÃ RÕ" """
+def _search_json_qa(user_input: str, domain: str) -> str:
+    """Search in JSON Q&A fallback"""
     try:
-        # CHẶN FLOW PHRASES TƯƠNG TỰ - TRỪ "TÔI ĐÃ RÕ"
-        flow_blocked_phrases = [
-            "cấp hộ chiếu lần đầu", "cấp lại hộ chiếu", "đổi hộ chiếu",
-            "dưới 14 tuổi", "từ đủ 14 tuổi", "hộ chiếu hết hạn", "bị mất hộ chiếu",
-            "tiếp tục", "quay lại", "thoát hướng dẫn"
-        ]
+        json_path = f"dataset/{domain}/response.json"
         
-        user_lower = user_input.lower().strip()
-        
-        # Bỏ chặn "tôi đã rõ"
-        if user_lower != "tôi đã rõ" and any(phrase in user_lower for phrase in flow_blocked_phrases):
-            logger.info(f"🚫 BLOCKED flow phrase in JSON search: '{user_input}'")
-            return None
-            
-        json_path = f"dataset/{domain}/responses.json"
         if not os.path.exists(json_path):
+            logger.debug(f"📄 JSON not found: {json_path}")
             return None
-            
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            
-        entries = data.get("entries", [])
+
+        with open(json_path, 'r', encoding='utf-8') as f:
+            qa_data = json.load(f)
         
-        for entry in entries:
-            keywords = entry.get("keywords", [])
-            if any(kw.lower() in user_lower for kw in keywords):
-                responses = entry.get("responses", [])
-                if responses:
-                    return "\n".join(responses)
+        if not isinstance(qa_data, list):
+            logger.warning("❌ JSON format invalid")
+            return None
         
-        return None
+        # Extract questions and answers
+        questions = []
+        answers = []
+        
+        for item in qa_data:
+            if isinstance(item, dict) and 'question' in item and 'answer' in item:
+                questions.append(item['question'])
+                answers.append(item['answer'])
+                
+                # Add keywords as additional questions
+                if 'keywords' in item and isinstance(item['keywords'], list):
+                    for keyword in item['keywords']:
+                        questions.append(keyword)
+                        answers.append(item['answer'])
+        
+        # Simple keyword matching
+        best_match = _find_best_match(user_input, questions, answers)
+        
+        return best_match
+        
     except Exception as e:
-        logger.error(f"Error in simple_json_search: {e}")
+        logger.error(f"❌ JSON search error: {e}")
         return None
 
-# ===== RAG QUERY PROCESSING =====
+def _find_best_match(user_input: str, questions: list, answers: list) -> str:
+    """Find best matching Q&A - FIXED logic"""
+    user_lower = user_input.lower().strip()
+    user_words = set(user_lower.split())
+    
+    # Remove stop words
+    stop_words = {'là', 'của', 'và', 'có', 'được', 'cho', 'với', 'từ', 'về', 'như', 'khi', 'sẽ', 'đã', 'này', 'đó', 'một', 'các', 'những', 'để', 'trong', 'trên', 'dưới', 'theo', 'gì', 'thì', 'hay', 'hoặc', 'bao', 'nhiều', 'nào', 'ai', 'ở', 'đâu'}
+    user_keywords = user_words - stop_words
+    
+    best_score = 0
+    best_answer = None
+    
+    for i, question in enumerate(questions):
+        if i >= len(answers):
+            continue
+            
+        q_lower = question.lower()
+        q_words = set(q_lower.split())
+        q_keywords = q_words - stop_words
+        
+        score = 0
+        
+        # 1. Exact substring match (high priority)
+        if user_lower in q_lower:
+            score += 3.0
+        elif q_lower in user_lower:
+            score += 2.5
+        
+        # 2. Keyword overlap (must have meaningful overlap)
+        if user_keywords and q_keywords:
+            overlap = len(user_keywords & q_keywords)
+            total_user_keywords = len(user_keywords)
+            
+            # Require significant overlap for shorter queries
+            if total_user_keywords <= 3:
+                # Short query: need 80% keyword match
+                required_overlap = max(2, int(total_user_keywords * 0.8))
+            else:
+                # Longer query: need 60% keyword match  
+                required_overlap = max(2, int(total_user_keywords * 0.6))
+            
+            if overlap >= required_overlap:
+                overlap_ratio = overlap / total_user_keywords
+                score += overlap_ratio * 2.0
+            else:
+                # Penalty for insufficient overlap
+                score -= 1.0
+        
+        # 3. Key entity matching (domain-specific)
+        user_entities = _extract_entities(user_lower)
+        q_entities = _extract_entities(q_lower)
+        
+        if user_entities and q_entities:
+            entity_overlap = len(user_entities & q_entities)
+            if entity_overlap > 0:
+                score += entity_overlap * 0.8
+            else:
+                # Different entities = probably different topic
+                score -= 0.5
+        
+        # 4. Question type matching
+        user_type = _classify_question_type(user_lower)
+        q_type = _classify_question_type(q_lower)
+        
+        if user_type == q_type and user_type != 'general':
+            score += 0.5
+        elif user_type != q_type and user_type != 'general' and q_type != 'general':
+            # Different question types = penalty
+            score -= 0.8
+        
+        # 5. Length similarity (avoid matching very different length questions)
+        len_diff = abs(len(user_input) - len(question))
+        if len_diff > 100:  # Very different lengths
+            score -= 0.3
+        
+        if score > best_score:
+            best_score = score
+            best_answer = answers[i]
+    
+    # Higher threshold to ensure quality matches
+    if best_answer and best_score >= 2.0:  # Raised threshold
+        logger.info(f"📊 Q&A match score: {best_score:.2f}")
+        logger.info(f"📝 User: '{user_input[:50]}...'")
+        logger.info(f"📝 Matched: '{questions[answers.index(best_answer)][:50]}...'")
+        return best_answer
+    
+    if best_score > 0:
+        logger.info(f"❌ Best score {best_score:.2f} below threshold 2.0")
+    
+    return None
+
+def _extract_entities(text: str) -> set:
+    """Extract domain entities from text"""
+    entities = set()
+    
+    entity_patterns = {
+        'hộ_chiếu': ['hộ chiếu', 'passport'],
+        'thị_thực': ['thị thực', 'visa'],
+        'xuất_cảnh': ['xuất cảnh'],
+        'nhập_cảnh': ['nhập cảnh'],
+        'tạm_trú': ['tạm trú'],
+        'thường_trú': ['thường trú'],
+        'tạm_hoãn': ['tạm hoãn', 'hoãn'],
+        'cấm': ['cấm', 'không được'],
+        'mất': ['mất', 'bị mất', 'thất lạc'],
+        'hỏng': ['hỏng', 'rách', 'hư'],
+        'hết_hạn': ['hết hạn', 'quá hạn'],
+        'trẻ_em': ['trẻ em', 'dưới 14 tuổi'],
+        'lệ_phí': ['lệ phí', 'phí', 'chi phí'],
+        'thời_gian': ['thời gian', 'bao lâu', 'thời hạn'],
+        'hồ_sơ': ['hồ sơ', 'giấy tờ', 'tài liệu'],
+        'thủ_tục': ['thủ tục', 'quy trình', 'cách làm']
+    }
+    
+    for entity, patterns in entity_patterns.items():
+        if any(pattern in text for pattern in patterns):
+            entities.add(entity)
+    
+    return entities
+
+def _classify_question_type(text: str) -> str:
+    """Classify question type"""
+    if any(word in text for word in ['quy định về', 'quy định', 'định nghĩa', 'là gì', 'nghĩa là']):
+        return 'definition'
+    elif any(word in text for word in ['thủ tục', 'cách làm', 'làm thế nào', 'hồ sơ', 'các bước']):
+        return 'procedure'  
+    elif any(word in text for word in ['điều kiện', 'yêu cầu', 'ai được', 'trường hợp nào']):
+        return 'requirements'
+    elif any(word in text for word in ['phí', 'lệ phí', 'chi phí', 'bao nhiêu tiền']):
+        return 'fee'
+    elif any(word in text for word in ['thời gian', 'bao lâu', 'mất bao lâu', 'thời hạn']):
+        return 'time'
+    elif any(word in text for word in ['ở đâu', 'nộp đâu', 'địa chỉ', 'cơ quan']):
+        return 'location'
+    else:
+        return 'general'
+
+# ===== RAG QUERY =====
 async def query_rag_engine(user_input: str, domain: str = "xuatnhapcanh") -> dict:
-    """Query RAG engine với error handling"""
+    """Query RAG Engine - Simplified"""
     rag_engine = get_rag_engine()
     
-    if not rag_engine:
+    if not rag_engine or not rag_engine.is_initialized:
+        logger.error("❌ RAG Engine not available")
         return {
             'success': False,
             'answer': None,
-            'error': 'RAG engine not available'
+            'error': 'RAG Engine not available'
         }
     
     try:
-        logger.info(f"🤖 Querying RAG engine for: {user_input[:50]}...")
+        logger.info(f"🤖 Querying RAG Engine...")
         
-        # Query với timeout
-        result = await asyncio.wait_for(
-            rag_engine.query_async(user_input, k=3, include_sources=True),
-            timeout=15.0
-        )
+        result = await rag_engine.query(user_input)
         
-        if result['success']:
-            logger.info(f"✅ RAG response generated (confidence: {result['metadata'].get('confidence', 'N/A')})")
+        if result['success'] and result.get('answer'):
+            metadata = result.get('metadata', {})
+            
             return {
                 'success': True,
                 'answer': result['answer'],
-                'sources': result['sources'],
-                'metadata': result['metadata']
+                'sources': result.get('sources', ''),
+                'metadata': {
+                    'response_time': metadata.get('response_time', 0),
+                    'context_sources': metadata.get('context_sources', 0),
+                    'context_type': metadata.get('context_type', 'unknown'),
+                    'query_intent': metadata.get('query_intent', 'unknown')
+                }
             }
         else:
-            logger.warning(f"⚠️ RAG query failed: {result.get('error', 'Unknown error')}")
+            logger.warning("⚠️ RAG Engine no results")
             return {
                 'success': False,
                 'answer': None,
-                'error': result.get('error', 'RAG query failed')
+                'error': result.get('error', 'No results found')
             }
             
-    except asyncio.TimeoutError:
-        logger.error("❌ RAG query timeout")
-        return {
-            'success': False,
-            'answer': None,
-            'error': 'RAG query timeout'
-        }
     except Exception as e:
         logger.error(f"❌ RAG query error: {e}")
         return {
@@ -241,60 +349,80 @@ async def query_rag_engine(user_input: str, domain: str = "xuatnhapcanh") -> dic
             'error': str(e)
         }
 
-def sync_query_rag_engine(user_input: str, domain: str = "xuatnhapcanh") -> dict:
-    """Sync wrapper cho RAG query"""
-    try:
-        return asyncio.run(query_rag_engine(user_input, domain))
-    except Exception as e:
-        logger.error(f"❌ Sync RAG query error: {e}")
-        return {
-            'success': False,
-            'answer': None,
-            'error': str(e)
-        }
+def sync_query_rag(user_input: str, domain: str = "xuatnhapcanh") -> dict:
+    """Sync wrapper for RAG query"""
+    return asyncio.run(query_rag_engine(user_input, domain))
 
-# ===== GREETING & FILTERS =====
+# ===== CONTEXT MANAGEMENT =====
+_user_contexts = {}
+
+def get_user_context(user_id: str) -> dict:
+    return _user_contexts.get(user_id, {})
+
+def update_user_context(user_id: str, query: str, response: str, source: str):
+    if user_id not in _user_contexts:
+        _user_contexts[user_id] = {'last_queries': [], 'last_topic': None}
+    
+    context = _user_contexts[user_id]
+    context['last_queries'].append({
+        'query': query,
+        'response': response[:100],
+        'source': source,
+        'timestamp': datetime.now().isoformat()
+    })
+    
+    # Keep last 3 queries only
+    if len(context['last_queries']) > 3:
+        context['last_queries'] = context['last_queries'][-3:]
+    
+    # Extract topic from query
+    if any(word in query.lower() for word in ['hộ chiếu', 'passport']):
+        context['last_topic'] = 'hộ chiếu'
+    elif any(word in query.lower() for word in ['thị thực', 'visa']):
+        context['last_topic'] = 'thị thực'
+
+def enhance_query_with_context(user_id: str, query: str) -> str:
+    """Enhance short queries with context"""
+    context = get_user_context(user_id)
+    
+    # Only enhance very short queries
+    if len(query.split()) <= 3 and context.get('last_topic'):
+        context_words = ['chi phí', 'lệ phí', 'thời gian', 'bao lâu', 'hồ sơ', 'thủ tục', 'ở đâu']
+        
+        if any(word in query.lower() for word in context_words):
+            enhanced = f"{context['last_topic']} {query}"
+            logger.info(f"Enhanced: '{query}' → '{enhanced}'")
+            return enhanced
+    
+    return query
+
+# ===== HELPER FUNCTIONS =====
 def handle_greeting(user_input: str) -> str:
-    # Chỉ greeting khi là câu chào ngắn gọn, không dính các câu hỏi thực sự
-    greeting_words = ["chào", "hi", "hello", "xin chào", "good morning"]
-    # Xoá khoảng trắng đầu/cuối, lower
+    """Handle greetings"""
+    greeting_words = ["chào", "hi", "hello", "xin chào"]
     msg = user_input.strip().lower()
-    # Nếu đúng greeting (độ dài < 20 và chứa greeting word)
-    if any(word in msg for word in greeting_words) and len(msg.split()) <= 4:
+    
+    if any(word in msg for word in greeting_words) and len(msg.split()) <= 3:
         return (
-            "Xin chào! Tôi là trợ lý hỗ trợ thông tin về thủ tục hành chính.\n\n"
+            "Xin chào! Tôi là trợ lý hỗ trợ thông tin xuất nhập cảnh.\n\n"
             "Tôi có thể giúp bạn:\n"
-            "• Trả lời thắc mắc về thủ tục DVC\n" 
-            "• Hướng dẫn từng bước làm hồ sơ\n"
-            "• Tìm kiếm trong cơ sở dữ liệu pháp lý\n\n"
+            "• Thủ tục cấp hộ chiếu, visa\n" 
+            "• Thông tin pháp lý xuất nhập cảnh\n"
+            "• Hướng dẫn làm hồ sơ\n\n"
             "Bạn cần hỗ trợ gì ạ?"
         )
     return None
 
 def handle_sensitive_content(user_input: str) -> str:
-    """Chặn nội dung nhạy cảm"""
-    sensitive_keywords = [
-        "vương đình huệ", "nguyễn phú trọng", "chủ tịch", "tổng bí thư",
-        "chính trị", "bầu cử", "chính quyền"
-    ]
+    """Block sensitive political content"""
+    sensitive_keywords = ["chính trị", "bầu cử", "chính quyền", "lãnh đạo"]
     if any(kw in user_input.lower() for kw in sensitive_keywords):
-        return "❌ Tôi chỉ hỗ trợ các vấn đề thủ tục hành chính, không trả lời về nội dung chính trị."
+        return "❌ Tôi chỉ hỗ trợ thông tin về thủ tục hành chính, không trả lời nội dung chính trị."
     return None
 
-# ===== MAIN PROCESSOR - ENHANCED =====
+# ===== MAIN PROCESSOR =====
 def process_user_query(user_input: str, user_id: str, domain: str = None) -> dict:
-    """
-    Xử lý câu hỏi người dùng - ENHANCED với RAG và Flow Check
-    
-    PRIORITY ORDER:
-    0. **FLOW STATE CHECK (NEW)** - Kiểm tra user có đang trong flow không
-    1. Greeting handling
-    2. Sensitive content filter  
-    3. Excel search (highest priority)
-    4. JSON responses search
-    5. RAG engine query
-    6. Fallback message
-    """
+    """Main query processor - Streamlined"""
     
     user_input = user_input.strip()
     if not user_input:
@@ -302,232 +430,165 @@ def process_user_query(user_input: str, user_id: str, domain: str = None) -> dic
 
     domain = domain or "xuatnhapcanh"
     
-    logger.info(f"Processing query: '{user_input[:50]}...' for domain: {domain}")
+    # Enhance query with context
+    enhanced_query = enhance_query_with_context(user_id, user_input)
+    
+    logger.info(f"🔍 Processing: '{enhanced_query[:40]}...'")
 
-    # ===== 0. FLOW STATE CHECK =====
-    # Kiểm tra user có đang trong flow không - nếu có thì KHÔNG xử lý bình thường
+    # ===== 1. Check flow state =====
     try:
-        # Import flow_engine để check state
         from services.flow_engine import flow_engine
-        
-        # Kiểm tra user có đang trong step flow không
         if flow_engine.is_in_flow(user_id):
-            logger.info(f"🔄 User {user_id} is in active flow - SKIPPING unified processor")
             return format_response(
-                "🤖 Bạn đang trong hướng dẫn từng bước. Vui lòng sử dụng các nút điều khiển hoặc nhắn 'Thoát hướng dẫn' để kết thúc.",
-                source="flow_redirect",
-                metadata={"reason": "user_in_step_flow"}
+                "🤖 Bạn đang trong hướng dẫn. Vui lòng sử dụng các nút hoặc nhắn 'Thoát' để kết thúc.",
+                source="flow_redirect"
             )
-        
-        # TODO: Kiểm tra user có đang trong question flow không
-        # Cần access tới chat_controller session để check mode
-        # Tạm thời skip vì cần refactor để avoid circular import
-        
-        logger.debug(f"✅ User {user_id} not in flow - proceeding with normal processing")
-        
-    except ImportError:
-        logger.warning("⚠️ Could not import flow_engine - proceeding without flow check")
-    except Exception as e:
-        logger.error(f"❌ Error checking flow state: {e}")
-        # Continue với processing bình thường nếu có lỗi
+    except:
+        pass
 
-
-    # ===== 2. Xử lý chào hỏi =====
-    greeting_response = handle_greeting(user_input)
+    # ===== 2. Handle greetings =====
+    greeting_response = handle_greeting(enhanced_query)
     if greeting_response:
+        update_user_context(user_id, user_input, greeting_response, "greeting")
         return format_response(greeting_response, source="greeting")
 
-    # ===== 3. Chặn nội dung nhạy cảm =====
-    sensitive_response = handle_sensitive_content(user_input)
+    # ===== 3. Block sensitive content =====
+    sensitive_response = handle_sensitive_content(enhanced_query)
     if sensitive_response:
         return format_response(sensitive_response, source="filter")
 
-    # ===== 4. Tìm kiếm trong Excel (ưu tiên cao nhất) =====
-    excel_result = simple_excel_search(user_input, domain)
-    if excel_result:
-        logger.info(f"✅ Found answer in Excel for: {user_input[:30]}")
-        return format_response(excel_result, source="excel", metadata={"domain": domain})
+    # ===== 4. Smart Q&A Search (Excel + JSON) =====
+    qa_result = smart_qa_search(enhanced_query, domain)
+    if qa_result:
+        logger.info("✅ Found answer in Q&A data")
+        update_user_context(user_id, user_input, qa_result, "qa_data")
+        return format_response(qa_result, source="qa_data", metadata={"domain": domain})
 
-    # ===== 5. Tìm kiếm trong JSON responses =====
-    json_result = simple_json_search(user_input, domain)
-    if json_result:
-        logger.info(f"✅ Found answer in JSON for: {user_input[:30]}")
-        return format_response(json_result, source="json", metadata={"domain": domain})
-
-    # ===== 6. RAG Engine Query =====
+    # ===== 5. RAG Engine =====
     if RAG_AVAILABLE and get_rag_engine():
-        logger.info(f"🤖 Trying RAG engine for: {user_input[:30]}")
+        logger.info("🤖 Trying RAG Engine...")
         
-        rag_result = sync_query_rag_engine(user_input, domain)
+        rag_result = sync_query_rag(enhanced_query, domain)
         
         if rag_result['success'] and rag_result['answer']:
-            logger.info(f"✅ Found answer via RAG for: {user_input[:30]}")
+            logger.info("✅ RAG Engine found answer")
             
-            # Format RAG response với metadata đầy đủ
             metadata = {
                 "domain": domain,
-                "source_type": "rag",
-                "confidence": rag_result['metadata'].get('confidence', 0),
-                "processing_time": rag_result['metadata'].get('total_time', 0),
-                "provider": rag_result['metadata'].get('provider_used', 'unknown'),
-                "sources_count": len(rag_result.get('sources', []))
+                "source_type": "rag_engine",
+                "response_time": rag_result['metadata'].get('response_time', 0),
+                "context_sources": rag_result['metadata'].get('context_sources', 0),
+                "context_type": rag_result['metadata'].get('context_type', 'unknown')
             }
             
-            # Enhance answer với source info
-            enhanced_answer = rag_result['answer']
-            if rag_result.get('sources'):
-                enhanced_answer += f"\n\n💡 *Dựa trên {len(rag_result['sources'])} tài liệu pháp lý*"
+            update_user_context(user_id, user_input, rag_result['answer'], "rag_engine")
             
             return format_response(
-                enhanced_answer, 
-                source="rag",
+                rag_result['answer'], 
+                source="rag_engine",
                 metadata=metadata
             )
         else:
-            logger.warning(f"⚠️ RAG engine failed: {rag_result.get('error', 'Unknown error')}")
+            logger.warning(f"⚠️ RAG failed: {rag_result.get('error', 'Unknown')}")
+    else:
+        logger.warning("⚠️ RAG Engine not available")
 
-    # ===== 7. Fallback - không tìm thấy anywhere =====
+    # ===== 6. Fallback =====
     fallback_message = (
         f"Xin lỗi, tôi chưa tìm thấy thông tin về '{user_input}'. "
         "Bạn có thể:\n"
         "• Thử diễn đạt lại câu hỏi\n"
-        "• Sử dụng 'Hướng dẫn quy trình' để được hướng dẫn từng bước\n"
-        "• Liên hệ trực tiếp cơ quan có thẩm quyền"
+        "• Hỏi về thủ tục cụ thể (ví dụ: 'làm hộ chiếu')\n"
+        "• Liên hệ cơ quan có thẩm quyền"
     )
     
-    logger.warning(f"❌ No answer found anywhere for: {user_input}")
+    logger.warning(f"❌ No answer found for: {enhanced_query}")
     return format_response(fallback_message, source="fallback", metadata={"domain": domain})
 
-
-# ===== DOMAIN DETECTION (giữ nguyên) =====
-def detect_domain(user_input: str) -> str:
-    """Phát hiện domain đơn giản"""
-    lowered = user_input.lower()
-    
-    if any(k in lowered for k in ["hộ chiếu", "xuất nhập cảnh", "passport", "visa"]):
-        return "xuatnhapcanh"
-    elif any(k in lowered for k in ["căn cước", "cccd", "chứng minh"]):
-        return "cancuoc" 
-    elif any(k in lowered for k in ["đăng ký xe", "biển số", "xe máy"]):
-        return "dangkyxe"
-    elif any(k in lowered for k in ["thường trú", "tạm trú", "cư trú"]):
-        return "cutru"
-    
-    return "xuatnhapcanh"  # default
-
-# ===== RAG MANAGEMENT FUNCTIONS =====
+# ===== SYSTEM MANAGEMENT =====
 async def initialize_system(force_rebuild=False):
-    """Initialize toàn bộ hệ thống including RAG"""
-    logger.info("🔧 Initializing unified processor system...")
+    """Initialize system"""
+    logger.info("🔧 Initializing system...")
     
-    success = await initialize_rag_engine(force_rebuild=force_rebuild)
+    rag_success = await initialize_rag_engine("xuatnhapcanh")
     
     return {
-        'success': True,  # Always success cho unified processor
-        'rag_available': success,
-        'message': f"System initialized. RAG: {'✅' if success else '❌'}"
+        'success': True,
+        'rag_available': rag_success,
+        'message': f"System initialized. RAG: {'✅' if rag_success else '❌'}"
     }
 
 def get_system_status():
-    """Lấy status tổng quan của hệ thống"""
+    """Get system status"""
     rag_engine = get_rag_engine()
     
     status = {
         'unified_processor': {
             'available': True,
-            'data_sources': ['excel', 'json', 'rag', 'fallback'],
-            'domains': ['xuatnhapcanh', 'cancuoc', 'dangkyxe', 'cutru']
+            'data_sources': ['qa_data', 'rag_engine', 'fallback']
         },
         'rag_engine': {
-            'available': rag_engine is not None,
+            'available': rag_engine is not None and rag_engine.is_initialized if rag_engine else False,
             'initialized': _rag_initialization_attempted
         }
     }
     
-    if rag_engine:
+    if rag_engine and rag_engine.is_initialized:
         try:
-            rag_stats = rag_engine.get_system_stats()
+            stats = rag_engine.get_stats()
             status['rag_engine'].update({
-                'stats': rag_stats,
-                'vector_store_docs': rag_stats.get('vector_store', {}).get('total_documents', 0),
-                'llm_providers': rag_stats.get('llm_providers', {}).get('providers', {}),
-                'session_queries': rag_stats.get('session', {}).get('queries_processed', 0)
+                'stats': stats,
+                'documents': stats.get('components', {}).get('vector_store', {}).get('total_documents', 0)
             })
         except Exception as e:
             status['rag_engine']['error'] = str(e)
     
     return status
 
-async def refresh_rag_engine():
-    """Refresh RAG engine"""
-    rag_engine = get_rag_engine()
-    if rag_engine:
-        rag_engine.refresh_system()
-        logger.info("🔄 RAG engine refreshed")
-        return True
-    return False
-
-def clear_all_caches():
-    """Clear tất cả caches"""
-    rag_engine = get_rag_engine()
-    if rag_engine:
-        rag_engine.clear_caches()
-        logger.info("🗑️ All caches cleared")
-
-# ===== UTILITY FUNCTIONS (giữ nguyên) =====
-def log_unanswered_question(user_input: str, domain: str):
-    """Log câu hỏi chưa có đáp án để admin review"""
-    try:
-        log_file = f"logs/unanswered_{domain}.txt"
-        os.makedirs("logs", exist_ok=True)
-        
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"{datetime.now().isoformat()} - {user_input}\n")
-    except Exception as e:
-        logger.error(f"Error logging unanswered question: {e}")
-
-def get_quick_stats() -> dict:
-    """Thống kê nhanh hệ thống"""
-    stats = {
-        "available_domains": ["xuatnhapcanh", "cancuoc", "dangkyxe", "cutru"],
-        "data_sources": ["excel", "json", "rag", "greeting", "fallback"],
-        "rag_enabled": RAG_AVAILABLE and get_rag_engine() is not None,
-        "status": "enhanced_with_rag"
+def health_check() -> dict:
+    """System health check"""
+    health = {
+        'timestamp': datetime.now().isoformat(),
+        'overall_status': 'healthy',
+        'components': {}
     }
     
-    # Check data availability
-    for domain in stats["available_domains"]:
+    # Check Q&A data
+    qa_files = 0
+    for domain in ['xuatnhapcanh']:
         excel_exists = os.path.exists(f"dataset/{domain}/question.xlsx")
-        json_exists = os.path.exists(f"dataset/{domain}/responses.json")
-        stats[f"{domain}_data"] = {"excel": excel_exists, "json": json_exists}
+        json_exists = os.path.exists(f"dataset/{domain}/response.json")
+        if excel_exists or json_exists:
+            qa_files += 1
     
-    # RAG stats
-    if stats["rag_enabled"]:
-        try:
-            rag_engine = get_rag_engine()
-            rag_system_stats = rag_engine.get_system_stats()
-            stats["rag_stats"] = {
-                "vector_docs": rag_system_stats.get('vector_store', {}).get('total_documents', 0),
-                "session_queries": rag_system_stats.get('session', {}).get('queries_processed', 0),
-                "avg_response_time": rag_system_stats.get('session', {}).get('avg_response_time', 0)
-            }
-        except Exception as e:
-            stats["rag_error"] = str(e)
+    health['components']['qa_data'] = {
+        'available': qa_files > 0,
+        'domains_with_data': qa_files
+    }
     
-    return stats
+    # Check RAG Engine
+    rag_engine = get_rag_engine()
+    if rag_engine and rag_engine.is_initialized:
+        stats = rag_engine.get_stats()
+        health['components']['rag_engine'] = {
+            'available': True,
+            'documents': stats.get('components', {}).get('vector_store', {}).get('total_documents', 0)
+        }
+    else:
+        health['components']['rag_engine'] = {
+            'available': False,
+            'reason': 'Not initialized'
+        }
+        health['overall_status'] = 'degraded'
+    
+    return health
 
-# ===== ASYNC WRAPPER FOR EXTERNAL USE =====
-async def process_user_query_async(user_input: str, user_id: str, domain: str = None) -> dict:
-    """Async wrapper cho process_user_query"""
-    # Đối với queries thông thường, vẫn dùng sync version
-    # Vì Excel/JSON searches là sync và nhanh
-    return process_user_query(user_input, user_id, domain)
-
-# ===== INITIALIZATION ON IMPORT =====
-# Auto-initialize RAG engine khi module được import (optional)
-# Uncomment nếu muốn auto-init
-# import threading
-# def _auto_init_rag():
-#     asyncio.run(initialize_rag_engine())
-# 
-# threading.Thread(target=_auto_init_rag, daemon=True).start()
+# ===== EXPORTS =====
+__all__ = [
+    'process_user_query',
+    'initialize_system', 
+    'get_system_status',
+    'health_check',
+    'get_rag_engine',
+    'initialize_rag_engine'
+]

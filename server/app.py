@@ -1,11 +1,10 @@
 from flask import Flask
-from flask_cors import CORS  # ✅ THÊM DÒNG NÀY
+from flask_cors import CORS
 from routes.chat_routes import chat_routes
 from routes.assistant_routes import assistant_routes
 
-
 app = Flask(__name__, static_folder=None)
-CORS(app)  # ✅ Cho phép frontend gọi từ http://localhost:3000
+CORS(app)
 
 app.register_blueprint(chat_routes)
 app.register_blueprint(assistant_routes)
@@ -13,6 +12,44 @@ app.register_blueprint(assistant_routes)
 @app.route("/", methods=["GET"])
 def health_check():
     return {"status": "OK", "message": "DVC Assistant Server is running."}
+
+# ===== AUTO-INITIALIZE VECTOR RAG ON STARTUP =====
+try:
+    from services.vector_rag.rag_engine import create_rag_engine
+    VECTOR_RAG_AVAILABLE = True
+    print("✅ Vector RAG loaded successfully")
+    
+    # AUTO-INITIALIZE RAG
+    print("🚀 Auto-initializing Vector RAG on server startup...")
+    
+    from services.unified_processor import initialize_vector_rag
+    import asyncio
+    import threading
+    
+    def init_rag_sync():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(initialize_vector_rag())
+            if result:
+                print("✅ Vector RAG auto-initialized successfully on startup!")
+            else:
+                print("❌ Vector RAG auto-initialization failed")
+        except Exception as e:
+            print(f"❌ RAG startup error: {e}")
+        finally:
+            loop.close()
+    
+    # Khởi tạo trong thread riêng để không block server
+    rag_thread = threading.Thread(target=init_rag_sync, daemon=True)
+    rag_thread.start()
+    
+except ImportError as e:
+    VECTOR_RAG_AVAILABLE = False
+    print(f"⚠️ Vector RAG not available: {e}")
+except Exception as e:
+    print(f"❌ RAG startup setup error: {e}")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)

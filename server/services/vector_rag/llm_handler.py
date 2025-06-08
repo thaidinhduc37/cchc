@@ -1,6 +1,6 @@
-# server/services/rag/llm_handler.py
+# server/services/vector_rag/llm_handler.py
 """
-LLM Handler - OPTIMIZED & SIMPLIFIED
+LLM Handler - SỬA LOGIC: 3 prompt templates riêng biệt
 """
 import asyncio
 import aiohttp
@@ -15,12 +15,64 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
-from services.vector_rag.rag_config import config, ENHANCED_LEGAL_PROMPT
+from services.vector_rag.rag_config import config
 
 logger = logging.getLogger(__name__)
 
+# SỬA LOGIC: 3 PROMPT TEMPLATES riêng cho từng loại context
+LEGAL_DOMINANT_PROMPT = """Bạn là chuyên gia PHÁP LUẬT xuất nhập cảnh Việt Nam.
+
+NGUYÊN TẮC TRẢ LỜI (LEGAL FOCUS):
+✅ Ưu tiên trích dẫn CHÍNH XÁC từ văn bản pháp luật
+✅ Nêu rõ Điều, Khoản, Điểm cụ thể
+✅ Ghi rõ tên văn bản và năm ban hành
+✅ Giải thích ý nghĩa pháp lý
+
+THÔNG TIN PHÁP LUẬT:
+{context}
+
+CÂU HỎI: {question}
+
+YÊU CẦU: Trả lời dựa trên VĂN BẢN PHÁP LUẬT, trích dẫn chính xác điều khoản.
+
+TRẢ LỜI:"""
+
+PROCEDURE_DOMINANT_PROMPT = """Bạn là chuyên viên THỦ TỤC HÀNH CHÍNH xuất nhập cảnh.
+
+NGUYÊN TẮC TRẢ LỜI (PROCEDURE FOCUS):
+✅ Hướng dẫn cụ thể từng bước thực hiện
+✅ Nêu rõ hồ sơ, lệ phí, thời gian, địa điểm
+✅ Thông tin thực tế từ Cổng dịch vụ công
+✅ Tư vấn thực tiễn cho người dân
+
+THÔNG TIN THỦ TỤC:
+{context}
+
+CÂU HỎI: {question}
+
+YÊU CẦU: Hướng dẫn cụ thể thủ tục thực hiện, nêu rõ các bước.
+
+TRẢ LỜI:"""
+
+MIXED_CONTEXT_PROMPT = """Bạn là chuyên gia TƯ VẤN PHÁP LUẬT và THỦ TỤC xuất nhập cảnh.
+
+NGUYÊN TẮC TRẢ LỜI (MIXED):
+✅ Kết hợp căn cứ pháp lý + hướng dẫn thực tiễn
+✅ Trích dẫn điều luật + giải thích thủ tục
+✅ Đảm bảo tính chính xác và thực tiễn
+✅ Phân biệt rõ "quy định pháp luật" vs "thủ tục thực hiện"
+
+THÔNG TIN THAM KHẢO:
+{context}
+
+CÂU HỎI: {question}
+
+YÊU CẦU: Trả lời đầy đủ cả khía cạnh pháp lý và thủ tục thực hiện.
+
+TRẢ LỜI:"""
+
 class LLMHandler:
-    """Simplified LLM Handler with basic validation"""
+    """LLM Handler với 3 prompt templates"""
     
     def __init__(self):
         self.config = config
@@ -31,7 +83,7 @@ class LLMHandler:
             'gemma': {'available': False, 'errors': 0}
         }
         
-        # Simplified validation settings
+        # Validation settings
         self.min_context_length = 60
         self.min_response_length = 30
         self.max_errors = 3
@@ -109,8 +161,43 @@ class LLMHandler:
             'overlap_score': overlap / max(len(query_words), 1)
         }
     
+    def _select_prompt_template(self, context: str) -> str:
+        """SỬA LOGIC: Chọn prompt template phù hợp"""
+        
+        # Detect context type
+        has_legal_section = '=== VĂN BẢN PHÁP LUẬT ===' in context
+        has_procedure_section = '=== THỦ TỤC HÀNH CHÍNH ===' in context
+        
+        if has_legal_section and has_procedure_section:
+            logger.info("🔀 Using MIXED_CONTEXT_PROMPT")
+            return MIXED_CONTEXT_PROMPT
+        
+        elif has_legal_section:
+            logger.info("⚖️ Using LEGAL_DOMINANT_PROMPT")
+            return LEGAL_DOMINANT_PROMPT
+        
+        elif has_procedure_section:
+            logger.info("📋 Using PROCEDURE_DOMINANT_PROMPT") 
+            return PROCEDURE_DOMINANT_PROMPT
+        
+        else:
+            # Fallback analysis
+            context_lower = context.lower()
+            legal_indicators = ['điều', 'khoản', 'luật số', 'nghị định']
+            procedure_indicators = ['thủ tục', 'hồ sơ', 'lệ phí', 'thời hạn']
+            
+            legal_count = sum(1 for indicator in legal_indicators if indicator in context_lower)
+            procedure_count = sum(1 for indicator in procedure_indicators if indicator in context_lower)
+            
+            if legal_count > procedure_count:
+                logger.info("⚖️ Using LEGAL_DOMINANT_PROMPT (fallback)")
+                return LEGAL_DOMINANT_PROMPT
+            else:
+                logger.info("📋 Using PROCEDURE_DOMINANT_PROMPT (fallback)")
+                return PROCEDURE_DOMINANT_PROMPT
+    
     async def generate_response(self, query: str, context: str) -> Dict[str, Any]:
-        """Generate response with simplified flow"""
+        """Generate response với smart prompt selection"""
         
         # Validate content
         validation = self.validate_content(context, query)
@@ -122,6 +209,9 @@ class LLMHandler:
                 'message': 'Không đủ thông tin để trả lời.'
             }
         
+        # SỬA LOGIC: Select appropriate prompt template
+        prompt_template = self._select_prompt_template(context)
+        
         # Try providers in order
         for provider_name, provider_info in self.providers.items():
             if not provider_info['available']:
@@ -129,9 +219,9 @@ class LLMHandler:
             
             try:
                 if provider_name == 'gemini':
-                    result = await self._generate_gemini(query, context)
+                    result = await self._generate_gemini(query, context, prompt_template)
                 elif provider_name == 'gemma':
-                    result = await self._generate_gemma(query, context)
+                    result = await self._generate_gemma(query, context, prompt_template)
                 else:
                     continue
                 
@@ -158,11 +248,11 @@ class LLMHandler:
             'message': 'Không có AI model nào khả dụng.'
         }
     
-    async def _generate_gemini(self, query: str, context: str) -> Dict[str, Any]:
-        """Generate with Gemini"""
+    async def _generate_gemini(self, query: str, context: str, prompt_template: str) -> Dict[str, Any]:
+        """Generate with Gemini using selected template"""
         try:
-            # Build prompt
-            prompt = ENHANCED_LEGAL_PROMPT.format(
+            # Build prompt with selected template
+            prompt = prompt_template.format(
                 context=context,
                 question=query
             )
@@ -180,7 +270,8 @@ class LLMHandler:
                     return {
                         'success': True,
                         'response': generated_text,
-                        'provider': 'gemini'
+                        'provider': 'gemini',
+                        'prompt_type': self._get_prompt_type(prompt_template)
                     }
                 else:
                     return {
@@ -204,26 +295,22 @@ class LLMHandler:
                 'error': f"gemini_error: {e}"
             }
     
-    async def _generate_gemma(self, query: str, context: str) -> Dict[str, Any]:
-        """Generate with Gemma local"""
+    async def _generate_gemma(self, query: str, context: str, prompt_template: str) -> Dict[str, Any]:
+        """Generate with Gemma using selected template"""
         try:
-            # Simple prompt for local model
-            prompt = f"""Dựa vào thông tin sau, trả lời câu hỏi:
-
-THÔNG TIN:
-{context}
-
-CÂU HỎI: {query}
-
-TRẢ LỜI:"""
+            # Simple prompt for local model (reduce complexity)
+            if '=== VĂN BẢN PHÁP LUẬT ===' in context:
+                simple_prompt = f"Dựa vào quy định pháp luật sau, trả lời câu hỏi:\n\n{context}\n\nCÂU HỎI: {query}\n\nTRẢ LỜI:"
+            else:
+                simple_prompt = f"Dựa vào thông tin thủ tục sau, hướng dẫn cụ thể:\n\n{context}\n\nCÂU HỎI: {query}\n\nTRẢ LỜI:"
             
             payload = {
                 "model": self.config.ollama_model,
-                "prompt": prompt,
+                "prompt": simple_prompt,
                 "stream": False,
                 "options": {
                     "temperature": self.config.temperature,
-                    "num_predict": 400,  # Limit for speed
+                    "num_predict": 400,
                     "top_p": 0.9,
                     "num_ctx": 1500
                 }
@@ -245,7 +332,8 @@ TRẢ LỜI:"""
                             return {
                                 'success': True,
                                 'response': generated_text,
-                                'provider': 'gemma'
+                                'provider': 'gemma',
+                                'prompt_type': 'simplified'
                             }
                         else:
                             return {
@@ -263,6 +351,17 @@ TRẢ LỜI:"""
                 'success': False,
                 'error': f"gemma_error: {e}"
             }
+    
+    def _get_prompt_type(self, prompt_template: str) -> str:
+        """Get prompt type name"""
+        if prompt_template == LEGAL_DOMINANT_PROMPT:
+            return 'legal_dominant'
+        elif prompt_template == PROCEDURE_DOMINANT_PROMPT:
+            return 'procedure_dominant'
+        elif prompt_template == MIXED_CONTEXT_PROMPT:
+            return 'mixed_context'
+        else:
+            return 'unknown'
     
     def _validate_response(self, response: str) -> bool:
         """Simple response validation"""

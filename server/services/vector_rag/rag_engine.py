@@ -1,6 +1,6 @@
 # server/services/vector_rag/rag_engine.py
 """
-RAG Engine - OPTIMIZED & STREAMLINED
+RAG Engine - CẬP NHẬT: Tích hợp logic mới
 """
 import asyncio
 import re
@@ -19,7 +19,7 @@ from services.vector_rag.context_optimizer import VietnameseContextOptimizer
 logger = logging.getLogger(__name__)
 
 class RAGEngine:
-    """Streamlined RAG Engine"""
+    """RAG Engine với logic mới"""
     
     def __init__(self):
         # Core components
@@ -34,14 +34,17 @@ class RAGEngine:
         self.min_confidence = 0.25
         self.is_initialized = False
         
-        logger.info("🚀 RAG Engine initialized")
+        # CẬP NHẬT: Chat history cho normalization
+        self.chat_history = []
+        self.max_history = 5
+        
+        logger.info("🚀 RAG Engine initialized với logic mới")
     
     async def initialize(self, force_rebuild: bool = False) -> Dict[str, Any]:
         """Initialize system"""
         try:
             logger.info("🔧 Initializing RAG system...")
             
-            # Initialize vector store
             vector_result = await self.vector_store.initialize(force_rebuild=force_rebuild)
             
             if not vector_result['success']:
@@ -50,7 +53,6 @@ class RAGEngine:
                     'message': f"Vector store failed: {vector_result['message']}"
                 }
             
-            # Check LLM providers
             llm_status = self.llm_handler.get_provider_status()
             available_providers = [name for name, info in llm_status['providers'].items() 
                                  if info['available']]
@@ -73,8 +75,8 @@ class RAGEngine:
             logger.error(f"❌ Initialization failed: {e}")
             return {'success': False, 'message': f"Failed: {e}"}
     
-    async def query(self, question: str) -> Dict[str, Any]:
-        """Process query - streamlined"""
+    async def query(self, question: str, session_id: str = None) -> Dict[str, Any]:
+        """CẬP NHẬT: Process query với normalization và chat history"""
         start_time = datetime.now()
         
         if not self.is_initialized:
@@ -87,32 +89,44 @@ class RAGEngine:
         try:
             logger.info(f"🎯 Processing: {question[:50]}...")
             
-            # 1. Classify query
-            features = self.query_classifier.classify(question)
+            # 1. CẬP NHẬT: Classify với chat history
+            features = self.query_classifier.classify(question, self.chat_history)
             
-            # 2. Execute search
-            search_results = await self._search(question, features)
+            # Log normalization results
+            if features.context_needed:
+                logger.info(f"📝 Normalized: '{features.original_query}' → '{features.normalized_query}'")
+            
+            # 2. Execute search với enhanced query
+            search_results = await self._search_enhanced(features)
             
             if not search_results:
                 return self._no_data_response(question, start_time)
             
-            # 3. Optimize context
+            # 3. Optimize context với separated sections
             context = self.context_optimizer.optimize_context(search_results, features)
             
             logger.info(f"📊 Context: {context.context_type}, conf: {context.confidence_score:.2f}")
+            logger.info(f"📋 Sources: Legal={context.vector_sources}, Procedure={context.web_sources}")
             
-            # 4. Generate response
+            # 4. Generate response với smart prompts
             if context.confidence_score >= self.min_confidence:
-                response = await self._generate_response(question, context)
+                response = await self._generate_response(features.normalized_query, context)
             else:
                 response = self._no_data_response(question, start_time)
             
-            # 5. Add metadata
+            # 5. CẬP NHẬT: Update chat history
+            self._update_chat_history(question)
+            
+            # 6. Add enhanced metadata
             response['metadata'] = {
                 'response_time': (datetime.now() - start_time).total_seconds(),
                 'context_sources': context.total_sources,
                 'context_type': context.context_type,
-                'query_intent': features.primary_intent
+                'query_intent': features.primary_intent,
+                'query_normalized': features.context_needed,
+                'original_query': features.original_query,
+                'normalized_query': features.normalized_query,
+                'extracted_entities': features.extracted_entities
             }
             
             return response
@@ -128,28 +142,33 @@ class RAGEngine:
                 }
             }
     
-    async def _search(self, query: str, features: Any) -> List[Dict]:
-        """Execute search based on strategy"""
+    def _update_chat_history(self, question: str):
+        """CẬP NHẬT: Update chat history cho context"""
+        self.chat_history.append(question)
+        
+        # Keep only last N messages
+        if len(self.chat_history) > self.max_history:
+            self.chat_history = self.chat_history[-self.max_history:]
+    
+    async def _search_enhanced(self, features: Any) -> List[Dict]:
+        """CẬP NHẬT: Enhanced search với entity reranking"""
         strategy = features.search_strategy
         all_results = []
         
         try:
             if strategy == 'vector_priority':
-                # Vector first, then web
-                vector_results = await self._vector_search(query, features, k=7)
-                web_results = await self._web_search(query, features, k=2)
+                vector_results = await self._vector_search_enhanced(features, k=7)
+                web_results = await self._web_search(features.normalized_query, features, k=2)
                 all_results = vector_results + web_results
                 
             elif strategy == 'web_priority':
-                # Web first, then vector
-                web_results = await self._web_search(query, features, k=5)
-                vector_results = await self._vector_search(query, features, k=3)
+                web_results = await self._web_search(features.normalized_query, features, k=5)
+                vector_results = await self._vector_search_enhanced(features, k=3)
                 all_results = web_results + vector_results
                 
             else:  # hybrid
-                # Parallel search
-                vector_task = self._vector_search(query, features, k=5)
-                web_task = self._web_search(query, features, k=3)
+                vector_task = self._vector_search_enhanced(features, k=5)
+                web_task = self._web_search(features.normalized_query, features, k=3)
                 
                 vector_results, web_results = await asyncio.gather(
                     vector_task, web_task, return_exceptions=True
@@ -165,17 +184,25 @@ class RAGEngine:
         
         return all_results
     
-    async def _vector_search(self, query: str, features: Any, k: int = 5) -> List[Dict]:
-        """Vector search"""
+    async def _vector_search_enhanced(self, features: Any, k: int = 5) -> List[Dict]:
+        """CẬP NHẬT: Vector search với entity reranking"""
         try:
-            # Optimize query for vector
-            optimized_query = self.query_classifier.format_query_for_vector(query, features)
+            # Use optimized query for vector search
+            optimized_query = self.query_classifier.format_query_for_vector(
+                features.normalized_query, features
+            )
             
-            # Search type
             search_type = "exact_legal" if features.has_specific_article else "normal"
             
-            results = await self.vector_store.search(optimized_query, k=k, search_type=search_type)
-            logger.info(f"✅ Vector: {len(results)} results")
+            # CẬP NHẬT: Pass entities for reranking
+            results = await self.vector_store.search(
+                optimized_query, 
+                k=k, 
+                search_type=search_type,
+                query_entities=features.extracted_entities
+            )
+            
+            logger.info(f"✅ Vector: {len(results)} results (with entity reranking)")
             return results
             
         except Exception as e:
@@ -183,7 +210,7 @@ class RAGEngine:
             return []
     
     async def _web_search(self, query: str, features: Any, k: int = 3) -> List[Dict]:
-        """Web search"""
+        """Web search (unchanged)"""
         try:
             procedures = await self.web_processor.search_procedures(query)
             
@@ -211,7 +238,7 @@ class RAGEngine:
             return []
     
     async def _generate_response(self, query: str, context: Any) -> Dict[str, Any]:
-        """Generate LLM response"""
+        """Generate LLM response (unchanged)"""
         try:
             if not context.context or len(context.context.strip()) < 100:
                 return {
@@ -227,6 +254,7 @@ class RAGEngine:
                     'success': True,
                     'answer': response['response'],
                     'provider': response.get('provider', 'unknown'),
+                    'prompt_type': response.get('prompt_type', 'unknown'),
                     'context_confidence': context.confidence_score,
                     'sources': context.source_summary
                 }
@@ -289,42 +317,39 @@ class RAGEngine:
             "Cấp thị thực"
         ]
     
-    async def rebuild_vector_store(self) -> Dict[str, Any]:
-        """Rebuild vector store (calls external build script)"""
-        try:
-            logger.info("📚 Rebuilding vector store...")
-            return await self.vector_store.initialize(force_rebuild=True)
-        except Exception as e:
-            logger.error(f"❌ Rebuild failed: {e}")
-            return {'success': False, 'message': f'Rebuild failed: {e}'}
-    
     async def search_only(self, query: str) -> Dict[str, Any]:
-        """Search without LLM generation (for debugging)"""
+        """CẬP NHẬT: Search only với debug info"""
         try:
             logger.info(f"🔍 Search only: {query[:50]}...")
             
-            # Classify query
-            features = self.query_classifier.classify(query)
+            # Classify with normalization
+            features = self.query_classifier.classify(query, self.chat_history)
             
             # Execute search
-            search_results = await self._search(query, features)
+            search_results = await self._search_enhanced(features)
             
             # Optimize context
             context = self.context_optimizer.optimize_context(search_results, features)
             
             return {
                 'success': True,
-                'query_features': {
+                'query_analysis': {
+                    'original_query': features.original_query,
+                    'normalized_query': features.normalized_query,
                     'intent': features.primary_intent,
                     'confidence': features.confidence,
                     'search_strategy': features.search_strategy,
-                    'has_legal_article': features.has_specific_article
+                    'has_legal_article': features.has_specific_article,
+                    'extracted_entities': features.extracted_entities,
+                    'context_added': features.context_needed
                 },
                 'search_results': len(search_results),
                 'context_info': {
                     'context_type': context.context_type,
                     'confidence': context.confidence_score,
-                    'sources': context.total_sources,
+                    'total_sources': context.total_sources,
+                    'legal_sources': context.vector_sources,
+                    'procedure_sources': context.web_sources,
                     'context_length': len(context.context)
                 },
                 'raw_context': context.context[:500] + "..." if len(context.context) > 500 else context.context
@@ -337,25 +362,43 @@ class RAGEngine:
                 'error': str(e)
             }
     
+    # Các method khác giữ nguyên
+    async def rebuild_vector_store(self) -> Dict[str, Any]:
+        """Rebuild vector store"""
+        try:
+            logger.info("📚 Rebuilding vector store...")
+            return await self.vector_store.initialize(force_rebuild=True)
+        except Exception as e:
+            logger.error(f"❌ Rebuild failed: {e}")
+            return {'success': False, 'message': f'Rebuild failed: {e}'}
+    
     def get_stats(self) -> Dict[str, Any]:
         """Get system statistics"""
         return {
             'is_initialized': self.is_initialized,
+            'chat_history_length': len(self.chat_history),
             'components': {
                 'vector_store': self.vector_store.get_stats(),
                 'web_processor': self.web_processor.get_stats(),
                 'llm_handler': self.llm_handler.get_provider_status()
             },
             'settings': {
-                'min_confidence': self.min_confidence
+                'min_confidence': self.min_confidence,
+                'max_chat_history': self.max_history
             }
         }
+    
+    def clear_chat_history(self):
+        """Clear chat history"""
+        self.chat_history = []
+        logger.info("🗑️ Chat history cleared")
     
     def clear_cache(self):
         """Clear all caches"""
         try:
             self.vector_store.embedding_model.clear_cache()
             self.web_processor.clear_cache()
+            self.clear_chat_history()
             logger.info("🗑️ All caches cleared")
         except Exception as e:
             logger.error(f"❌ Clear cache failed: {e}")

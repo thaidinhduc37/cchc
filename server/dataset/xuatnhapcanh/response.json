@@ -1,267 +1,143 @@
-[
-  {
-    "question": "Ai được cấp hộ chiếu phổ thông ở trong nước?",
-    "keywords": ["đối tượng cấp hộ chiếu", "ai được làm hộ chiếu phổ thông", "cấp hộ chiếu phổ thông trong nước"],
-    "answer": "Công dân Việt Nam từ đủ 14 tuổi trở lên, có đầy đủ giấy tờ tùy thân và không thuộc diện tạm hoãn xuất cảnh theo quy định, đều được cấp hộ chiếu phổ thông tại Cơ quan Quản lý xuất nhập cảnh Công an cấp tỉnh.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Hồ sơ cấp hộ chiếu phổ thông gồm những giấy tờ gì?",
-    "keywords": ["hồ sơ cấp hộ chiếu", "giấy tờ làm hộ chiếu", "làm hộ chiếu cần những gì"],
-    "answer": "- Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01).\n- 02 ảnh 4x6cm, nền trắng, chụp không quá 6 tháng.\n- Chứng minh nhân dân/Căn cước công dân bản gốc.\n- Hộ chiếu cũ (nếu có).\n- Trẻ em dưới 14 tuổi nộp thêm giấy khai sinh, giấy tờ của người đại diện hợp pháp.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Thủ tục làm hộ chiếu phổ thông tại tỉnh như thế nào?",
-    "keywords": ["thủ tục làm hộ chiếu", "các bước làm hộ chiếu", "làm hộ chiếu phổ thông tại tỉnh"],
-    "answer": "Bước 1: Chuẩn bị hồ sơ đầy đủ.\nBước 2: Nộp hồ sơ trực tiếp tại Cơ quan Quản lý xuất nhập cảnh Công an tỉnh hoặc qua Cổng dịch vụ công.\nBước 3: Nộp lệ phí và nhận giấy hẹn.\nBước 4: Nhận kết quả tại nơi nộp hoặc qua bưu chính.\nChi tiết: https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=29497",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Nộp hồ sơ làm hộ chiếu ở đâu?",
-    "keywords": ["nộp hồ sơ hộ chiếu", "địa điểm nộp hồ sơ", "làm hộ chiếu ở đâu"],
-    "answer": "Bạn nộp hồ sơ tại Phòng Quản lý xuất nhập cảnh Công an tỉnh, thành phố nơi thường trú hoặc tạm trú. Có thể nộp trực tiếp hoặc trực tuyến qua Cổng dịch vụ công Bộ Công an.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Thời gian cấp hộ chiếu là bao lâu?",
-    "keywords": ["thời gian cấp hộ chiếu", "bao lâu có hộ chiếu", "mất bao lâu làm hộ chiếu"],
-    "answer": "Hộ chiếu phổ thông được cấp trong 08 ngày làm việc kể từ khi nhận đủ hồ sơ hợp lệ.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Lệ phí làm hộ chiếu phổ thông là bao nhiêu?",
-    "keywords": ["lệ phí hộ chiếu", "phí làm hộ chiếu", "chi phí làm hộ chiếu"],
-    "answer": "Cấp mới hộ chiếu phổ thông: 160.000 đồng/lần cấp. Cấp lại do mất, hỏng: 320.000 đồng/lần.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể làm hộ chiếu online không?",
-    "keywords": ["làm hộ chiếu online", "đăng ký hộ chiếu trực tuyến"],
-    "answer": "Bạn có thể đăng ký cấp hộ chiếu phổ thông trực tuyến qua Cổng dịch vụ công Bộ Công an: https://dichvucong.bocongan.gov.vn",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Trẻ em dưới 14 tuổi làm hộ chiếu như thế nào?",
-    "keywords": ["hộ chiếu cho trẻ em dưới 14 tuổi", "thủ tục làm hộ chiếu cho trẻ em", "trẻ em làm hộ chiếu"],
-    "answer": "Trẻ em dưới 14 tuổi làm hộ chiếu cần tờ khai do cha mẹ hoặc người đại diện hợp pháp khai và ký tên, nộp bản sao giấy khai sinh và giấy tờ chứng minh quan hệ với người nộp hồ sơ.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có cần hộ khẩu khi làm hộ chiếu không?",
-    "keywords": ["có cần hộ khẩu khi làm hộ chiếu", "hộ chiếu cần sổ hộ khẩu"],
-    "answer": "Không bắt buộc phải xuất trình sổ hộ khẩu khi làm hộ chiếu, tuy nhiên có thể yêu cầu cung cấp thông tin nơi thường trú, tạm trú hoặc các giấy tờ chứng minh khác nếu cần thiết.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Cần chuẩn bị mấy ảnh khi làm hộ chiếu?",
-    "keywords": ["cần bao nhiêu ảnh làm hộ chiếu", "ảnh làm hộ chiếu", "chuẩn bị ảnh làm hộ chiếu"],
-    "answer": "Bạn cần chuẩn bị 2 ảnh 4x6cm nền trắng, chụp không quá 6 tháng, đầu để trần, không đeo kính màu.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Làm hộ chiếu bị mất thì phải làm sao?",
-    "keywords": ["mất hộ chiếu phải làm gì", "làm lại hộ chiếu bị mất", "cấp lại hộ chiếu bị mất"],
-    "answer": "Khi mất hộ chiếu, bạn phải báo ngay cho cơ quan Công an và làm đơn trình báo mất hộ chiếu. Sau đó, thực hiện thủ tục cấp lại hộ chiếu theo quy định, nộp lệ phí cấp lại.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Đổi hộ chiếu hết hạn như thế nào?",
-    "keywords": ["đổi hộ chiếu hết hạn", "gia hạn hộ chiếu", "hộ chiếu hết hạn phải làm sao"],
-    "answer": "Bạn nộp hồ sơ xin cấp hộ chiếu mới theo quy trình như cấp hộ chiếu lần đầu. Không có thủ tục gia hạn hộ chiếu, chỉ có cấp mới.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có được nhờ người khác nộp hộ hồ sơ làm hộ chiếu không?",
-    "keywords": ["nhờ người khác nộp hộ hộ chiếu", "ủy quyền nộp hồ sơ hộ chiếu"],
-    "answer": "Bạn phải trực tiếp nộp hồ sơ cấp hộ chiếu và xuất trình giấy tờ cá nhân. Trường hợp trẻ em dưới 14 tuổi, người đại diện hợp pháp có thể nộp thay.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Làm hộ chiếu ở tỉnh khác nơi thường trú có được không?",
-    "keywords": ["làm hộ chiếu ở tỉnh khác", "nộp hồ sơ hộ chiếu ngoài tỉnh"],
-    "answer": "Cấp hộ chiếu lần đầu thực hiện tại Công an tỉnh nơi thường trú hoặc tạm trú. Từ lần thứ 2, bạn có thể nộp tại bất kỳ tỉnh/thành nào thuận tiện.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể nhận hộ chiếu qua bưu điện không?",
-    "keywords": ["nhận hộ chiếu qua bưu điện", "hộ chiếu chuyển phát nhanh"],
-    "answer": "Bạn có thể đăng ký nhận hộ chiếu qua dịch vụ bưu chính khi nộp hồ sơ và thanh toán thêm phí chuyển phát.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có cần giấy khai sinh khi làm hộ chiếu không?",
-    "keywords": ["giấy khai sinh làm hộ chiếu", "làm hộ chiếu cần giấy khai sinh không"],
-    "answer": "Người dưới 14 tuổi khi làm hộ chiếu cần nộp bản sao giấy khai sinh. Người từ đủ 14 tuổi trở lên không bắt buộc phải nộp giấy khai sinh.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Thời gian tiếp nhận hồ sơ cấp hộ chiếu là khi nào?",
-    "keywords": ["thời gian tiếp nhận hồ sơ hộ chiếu", "giờ làm việc làm hộ chiếu"],
-    "answer": "Cơ quan Quản lý xuất nhập cảnh Công an tỉnh tiếp nhận hồ sơ từ thứ 2 đến thứ 6 và sáng thứ 7 (tùy đơn vị), trừ ngày lễ, Tết.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi đang tạm trú có làm hộ chiếu tại nơi tạm trú được không?",
-    "keywords": ["làm hộ chiếu nơi tạm trú", "hộ chiếu tạm trú"],
-    "answer": "Bạn được phép làm hộ chiếu tại Công an tỉnh nơi bạn đăng ký tạm trú hợp pháp.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Cần mang theo giấy tờ gì khi đến nhận hộ chiếu?",
-    "keywords": ["nhận hộ chiếu cần giấy tờ gì", "thủ tục nhận hộ chiếu"],
-    "answer": "Khi đến nhận hộ chiếu, bạn cần mang giấy hẹn trả kết quả, giấy tờ tùy thân và biên lai nộp lệ phí (nếu có).",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể sửa thông tin trên hộ chiếu không?",
-    "keywords": ["sửa thông tin hộ chiếu", "chỉnh sửa hộ chiếu"],
-    "answer": "Không thể sửa thông tin trên hộ chiếu đã cấp. Nếu có sai sót, bạn phải làm thủ tục cấp lại hộ chiếu mới và nộp lệ phí theo quy định.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi đổi tên thì hộ chiếu có cần đổi lại không?",
-    "keywords": ["đổi tên có phải đổi hộ chiếu", "thay đổi tên hộ chiếu"],
-    "answer": "Nếu bạn đổi tên, cần làm thủ tục cấp lại hộ chiếu để thông tin trên hộ chiếu khớp với giấy tờ tùy thân mới.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có cần khai số điện thoại, email khi làm hộ chiếu không?",
-    "keywords": ["khai số điện thoại khi làm hộ chiếu", "email làm hộ chiếu"],
-    "answer": "Bạn nên khai báo số điện thoại và email để cơ quan chức năng liên hệ khi cần thiết và hỗ trợ nhận thông báo tình trạng hồ sơ.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Hộ chiếu phổ thông có thời hạn bao lâu?",
-    "keywords": ["thời hạn hộ chiếu phổ thông", "hộ chiếu có giá trị mấy năm"],
-    "answer": "Hộ chiếu phổ thông cấp cho người từ đủ 14 tuổi trở lên có thời hạn 10 năm. Hộ chiếu cấp cho trẻ em dưới 14 tuổi có thời hạn 5 năm và không được gia hạn.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi bị mất Căn cước công dân, có làm hộ chiếu được không?",
-    "keywords": ["mất căn cước công dân làm hộ chiếu", "không có CMND làm hộ chiếu"],
-    "answer": "Bạn phải có giấy tờ tùy thân còn giá trị sử dụng như Căn cước công dân hoặc Chứng minh nhân dân để làm hộ chiếu. Nếu mất, cần làm lại trước khi xin cấp hộ chiếu.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có cần giấy xác nhận tạm trú để làm hộ chiếu không?",
-    "keywords": ["giấy xác nhận tạm trú làm hộ chiếu", "tạm trú làm hộ chiếu"],
-    "answer": "Nếu bạn làm hộ chiếu tại nơi tạm trú, phải có giấy xác nhận tạm trú hoặc sổ tạm trú hợp pháp để chứng minh cư trú.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Cần chuẩn bị hồ sơ gì khi cấp lại hộ chiếu do mất?",
-    "keywords": ["cấp lại hộ chiếu do mất", "hồ sơ cấp lại hộ chiếu"],
-    "answer": "- Đơn trình báo mất hộ chiếu.\n- Tờ khai cấp hộ chiếu mới.\n- 02 ảnh 4x6cm nền trắng.\n- Chứng minh nhân dân/Căn cước công dân còn giá trị.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Làm hộ chiếu cho trẻ em có cần cả cha và mẹ cùng đi không?",
-    "keywords": ["làm hộ chiếu cho trẻ em cần cha mẹ cùng đi", "hộ chiếu trẻ em cần người đại diện hợp pháp"],
-    "answer": "Chỉ cần một trong hai cha hoặc mẹ hoặc người đại diện hợp pháp đi nộp hồ sơ và ký tên, không bắt buộc cả hai cùng đi.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể cấp hộ chiếu tại nơi đang học tập hoặc làm việc không?",
-    "keywords": ["làm hộ chiếu nơi học tập", "hộ chiếu nơi làm việc"],
-    "answer": "Nếu bạn đăng ký tạm trú tại nơi học tập/làm việc và có giấy tờ chứng minh, bạn được làm hộ chiếu tại đó.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có cần mang bản sao giấy tờ khi nộp hồ sơ làm hộ chiếu không?",
-    "keywords": ["có cần bản sao giấy tờ làm hộ chiếu", "bản sao giấy tờ nộp hộ chiếu"],
-    "answer": "Bạn cần mang bản chính để đối chiếu, nhưng có thể chuẩn bị bản sao giấy tờ như giấy khai sinh cho trẻ em hoặc giấy xác nhận tạm trú nếu có yêu cầu.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có được làm hộ chiếu nếu đang bị tạm hoãn xuất cảnh không?",
-    "keywords": ["bị tạm hoãn xuất cảnh làm hộ chiếu", "đang bị cấm xuất cảnh làm hộ chiếu"],
-    "answer": "Nếu bạn thuộc trường hợp tạm hoãn xuất cảnh theo quy định của pháp luật thì không được cấp hộ chiếu cho đến khi hết thời hạn tạm hoãn.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Hồ sơ làm hộ chiếu online khác gì hồ sơ làm trực tiếp?",
-    "keywords": ["hồ sơ làm hộ chiếu online", "hồ sơ làm hộ chiếu trực tiếp"],
-    "answer": "Thành phần hồ sơ giống nhau. Khi làm online bạn cần upload bản scan/chụp rõ nét giấy tờ thay vì nộp bản giấy.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi có được nhờ người thân nhận hộ chiếu thay không?",
-    "keywords": ["nhờ người thân nhận hộ chiếu", "ủy quyền nhận hộ chiếu"],
-    "answer": "Chỉ người làm hộ chiếu hoặc cha/mẹ/người đại diện hợp pháp của trẻ em mới được nhận hộ chiếu. Người khác không được nhận hộ thay trừ trường hợp đặc biệt có giấy ủy quyền theo quy định.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi có phải dán ảnh vào tờ khai làm hộ chiếu không?",
-    "keywords": ["dán ảnh vào tờ khai hộ chiếu", "ảnh tờ khai hộ chiếu"],
-    "answer": "Bạn nên dán 1 ảnh vào tờ khai, ảnh còn lại kẹp cùng hồ sơ để đối chiếu khi nộp tại cơ quan cấp hộ chiếu.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể tra cứu tiến độ cấp hộ chiếu ở đâu?",
-    "keywords": ["tra cứu tiến độ cấp hộ chiếu", "xem trạng thái hồ sơ hộ chiếu"],
-    "answer": "Bạn có thể tra cứu tiến độ cấp hộ chiếu tại website Cổng dịch vụ công Bộ Công an hoặc liên hệ Phòng Quản lý xuất nhập cảnh nơi nộp hồ sơ.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể rút lại hồ sơ xin cấp hộ chiếu không?",
-    "keywords": ["rút hồ sơ cấp hộ chiếu", "hủy hồ sơ làm hộ chiếu"],
-    "answer": "Bạn có quyền rút lại hồ sơ xin cấp hộ chiếu nếu chưa được giải quyết. Liên hệ nơi tiếp nhận hồ sơ để được hướng dẫn cụ thể.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Làm hộ chiếu vào ngày lễ, thứ 7, chủ nhật được không?",
-    "keywords": ["làm hộ chiếu ngày lễ", "làm hộ chiếu cuối tuần"],
-    "answer": "Cơ quan cấp hộ chiếu làm việc giờ hành chính từ thứ 2 đến thứ 6, một số nơi làm sáng thứ 7. Không làm việc vào ngày lễ, chủ nhật.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có cần giấy xác nhận đang đi học để làm hộ chiếu không?",
-    "keywords": ["giấy xác nhận đi học làm hộ chiếu", "học sinh làm hộ chiếu"],
-    "answer": "Không bắt buộc phải có giấy xác nhận đang đi học để làm hộ chiếu. Tuy nhiên, nếu đăng ký tạm trú tại nơi học, nên chuẩn bị để chứng minh cư trú khi được yêu cầu.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Hộ chiếu bị nhàu, rách có được cấp lại không?",
-    "keywords": ["hộ chiếu bị rách có được cấp lại", "cấp lại hộ chiếu bị hỏng"],
-    "answer": "Nếu hộ chiếu bị rách, nhàu, bạn cần làm thủ tục cấp lại hộ chiếu. Hồ sơ như cấp mới, bổ sung nộp hộ chiếu bị hỏng.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Sau bao lâu từ khi nhận được hộ chiếu phải kiểm tra thông tin?",
-    "keywords": ["kiểm tra thông tin hộ chiếu mới nhận", "kiểm tra hộ chiếu"],
-    "answer": "Nên kiểm tra thông tin trên hộ chiếu ngay khi nhận để phát hiện sai sót, kịp thời phản ánh với cơ quan cấp hộ chiếu để được xử lý.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có được cấp hộ chiếu nếu còn nợ thuế không?",
-    "keywords": ["nợ thuế có được cấp hộ chiếu", "đang nợ thuế làm hộ chiếu"],
-    "answer": "Nếu bạn thuộc diện bị tạm hoãn xuất cảnh do nợ thuế hoặc nghĩa vụ tài chính, sẽ không được cấp hộ chiếu cho đến khi hoàn thành nghĩa vụ.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi bị thay đổi địa chỉ thường trú có phải đổi hộ chiếu không?",
-    "keywords": ["đổi hộ chiếu khi thay đổi địa chỉ", "hộ chiếu đổi địa chỉ thường trú"],
-    "answer": "Không bắt buộc phải đổi hộ chiếu khi thay đổi địa chỉ thường trú. Bạn chỉ cần khai báo địa chỉ mới khi làm hộ chiếu lần tiếp theo.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có thể làm hộ chiếu khi sắp hết hạn thị thực tạm trú không?",
-    "keywords": ["làm hộ chiếu khi sắp hết hạn thị thực", "hộ chiếu và visa tạm trú"],
-    "answer": "Bạn vẫn có thể làm hộ chiếu nếu có giấy tờ cư trú hợp pháp tại Việt Nam tại thời điểm nộp hồ sơ.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Có bắt buộc phải lấy dấu vân tay khi làm hộ chiếu?",
-    "keywords": ["lấy dấu vân tay làm hộ chiếu", "hộ chiếu có lấy dấu vân tay không"],
-    "answer": "Hiện nay, việc lấy dấu vân tay chỉ thực hiện đối với một số trường hợp đặc biệt hoặc khi làm hộ chiếu gắn chip điện tử.",
-    "intent": "thủ tục"
-  },
-  {
-    "question": "Tôi đang ở nước ngoài có thể làm hộ chiếu ở Việt Nam không?",
-    "keywords": ["đang ở nước ngoài làm hộ chiếu Việt Nam", "làm hộ chiếu ở nước ngoài"],
-    "answer": "Bạn có thể làm hộ chiếu tại Cơ quan đại diện ngoại giao của Việt Nam ở nước ngoài hoặc về Việt Nam và làm tại Công an tỉnh/thành.",
-    "intent": "thủ tục"
-  }
-]
+// [
+//   {
+//     "question": "Thành phần hồ sơ yêu cầu cấp hộ chiếu phổ thông là gì?",
+//     "keywords": ["thành phần hồ sơ hộ chiếu", "giấy tờ cấp hộ chiếu", "hồ sơ làm hộ chiếu"],
+//     "answer": "1. Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01, khai online hoặc trên giấy)\n2. 01 ảnh 4x6cm, nền trắng, chụp không quá 6 tháng\n3. Chứng minh nhân dân/Căn cước công dân bản gốc để đối chiếu\n4. Hộ chiếu cũ (nếu có, đối với trường hợp cấp lại)\n5. Giấy tờ chứng minh đối tượng ưu tiên (nếu thuộc diện ưu tiên)\n6. Trẻ em dưới 14 tuổi cần bổ sung giấy khai sinh và giấy tờ của người đại diện hợp pháp\n7. Nếu làm tại nơi tạm trú, cần có giấy xác nhận hoặc sổ tạm trú hợp pháp",
+//     "law_ref": "Điều 15, Luật 49/2019/QH14; Thông tư 31/2023/TT-BCA",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Lệ phí cấp hộ chiếu phổ thông là bao nhiêu?",
+//     "keywords": ["lệ phí hộ chiếu", "phí làm hộ chiếu", "chi phí làm hộ chiếu"],
+//     "answer": "Cấp mới hộ chiếu: 160.000 đồng/lần. Cấp lại do mất, hỏng: 320.000 đồng/lần.",
+//     "law_ref": "Thông tư 44/2023/TT-BTC",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Làm hộ chiếu ở đâu?",
+//     "keywords": ["nộp hồ sơ hộ chiếu ở đâu", "làm hộ chiếu ở đâu"],
+//     "answer": "Bạn nộp hồ sơ tại Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố nơi thường trú hoặc tạm trú. Có thể nộp trực tiếp hoặc trực tuyến qua Cổng DVC Bộ Công an.",
+//     "law_ref": "Điều 15, Luật 49/2019/QH14",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Cần chuẩn bị bao nhiêu ảnh khi làm hộ chiếu?",
+//     "keywords": ["chuẩn bị bao nhiêu ảnh làm hộ chiếu", "ảnh làm hộ chiếu"],
+//     "answer": "Bạn cần chuẩn bị 01 ảnh 4x6cm nền trắng để nộp cùng hồ sơ. Nên chuẩn bị 2 ảnh để đối chiếu khi cần.",
+//     "law_ref": "Thông tư 31/2023/TT-BCA",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Có thể làm hộ chiếu trực tuyến không?",
+//     "keywords": ["làm hộ chiếu online", "đăng ký hộ chiếu trực tuyến"],
+//     "answer": "Bạn có thể đăng ký cấp hộ chiếu phổ thông trực tuyến qua Cổng DVC Bộ Công an tại https://dichvucong.bocongan.gov.vn.",
+//     "law_ref": "Điều 16, Luật 49/2019/QH14",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Thời gian cấp hộ chiếu là bao lâu?",
+//     "keywords": ["thời gian cấp hộ chiếu", "bao lâu có hộ chiếu"],
+//     "answer": "Không quá 08 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ.",
+//     "law_ref": "Điều 17, Luật 49/2019/QH14",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Làm hộ chiếu cho trẻ em dưới 14 tuổi cần giấy tờ gì?",
+//     "keywords": ["hồ sơ hộ chiếu trẻ em", "làm hộ chiếu cho trẻ dưới 14 tuổi"],
+//     "answer": "Cần tờ khai do cha/mẹ hoặc người đại diện hợp pháp khai và ký, 01 ảnh 4x6cm của trẻ, bản sao giấy khai sinh, giấy tờ chứng minh quan hệ đại diện hợp pháp.",
+//     "law_ref": "Điều 15, Luật 49/2019/QH14; Thông tư 31/2023/TT-BCA",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Có thể nhận hộ chiếu qua bưu điện không?",
+//     "keywords": ["nhận hộ chiếu qua bưu điện", "chuyển phát hộ chiếu"],
+//     "answer": "Bạn có thể đăng ký nhận hộ chiếu qua dịch vụ bưu chính khi nộp hồ sơ và thanh toán thêm phí chuyển phát.",
+//     "law_ref": "Điều 17, Luật 49/2019/QH14",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Tôi bị mất hộ chiếu, muốn cấp lại cần giấy tờ gì?",
+//     "keywords": ["cấp lại hộ chiếu bị mất", "hồ sơ cấp lại hộ chiếu"],
+//     "answer": "- Đơn trình báo mất hộ chiếu\n- Tờ khai đề nghị cấp hộ chiếu mới\n- 01 ảnh 4x6cm nền trắng\n- CMND/CCCD còn giá trị sử dụng",
+//     "law_ref": "Điều 15, Luật 49/2019/QH14; Thông tư 31/2023/TT-BCA",
+//     "intent": "thủ tục"
+//   },
+//   {
+//     "question": "Giờ làm việc tiếp nhận hồ sơ cấp hộ chiếu là khi nào?",
+//     "keywords": ["giờ làm việc cấp hộ chiếu", "thời gian tiếp nhận hồ sơ hộ chiếu"],
+//     "answer": "Cơ quan Quản lý xuất nhập cảnh Công an tỉnh tiếp nhận hồ sơ từ thứ 2 đến thứ 6, một số nơi làm việc sáng thứ 7, trừ ngày lễ, Tết.",
+//     "law_ref": "",
+//     "intent": "thủ tục"
+//   },
 
+//   {
+//     "question": "Xuất cảnh là gì?",
+//     "keywords": ["xuất cảnh là gì", "định nghĩa xuất cảnh"],
+//     "answer": "Xuất cảnh là việc công dân Việt Nam ra khỏi lãnh thổ Việt Nam qua cửa khẩu của Việt Nam.",
+//     "law_ref": "Khoản 5, Điều 2, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Nhập cảnh là gì?",
+//     "keywords": ["nhập cảnh là gì", "định nghĩa nhập cảnh"],
+//     "answer": "Nhập cảnh là việc công dân Việt Nam vào lãnh thổ Việt Nam qua cửa khẩu của Việt Nam.",
+//     "law_ref": "Khoản 6, Điều 2, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Điều kiện để công dân được xuất cảnh?",
+//     "keywords": ["điều kiện xuất cảnh", "được xuất cảnh khi nào"],
+//     "answer": "Công dân Việt Nam được xuất cảnh khi có giấy tờ xuất nhập cảnh còn giá trị sử dụng và không thuộc trường hợp bị tạm hoãn xuất cảnh.",
+//     "law_ref": "Điều 33, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Các trường hợp nào bị tạm hoãn xuất cảnh?",
+//     "keywords": ["tạm hoãn xuất cảnh", "ai bị cấm xuất cảnh"],
+//     "answer": "Công dân bị tạm hoãn xuất cảnh nếu thuộc các trường hợp quy định tại Điều 36 như: đang bị truy cứu trách nhiệm hình sự, liên quan nợ thuế lớn, vi phạm hành chính, vì lý do quốc phòng an ninh...",
+//     "law_ref": "Điều 36, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Giấy tờ xuất nhập cảnh là gì?",
+//     "keywords": ["giấy tờ xuất nhập cảnh", "định nghĩa giấy tờ xuất nhập cảnh"],
+//     "answer": "Giấy tờ xuất nhập cảnh là hộ chiếu, giấy thông hành và các loại giấy tờ khác có giá trị xuất cảnh, nhập cảnh do cơ quan có thẩm quyền cấp.",
+//     "law_ref": "Khoản 1, Điều 3, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Hộ chiếu phổ thông có thời hạn bao lâu?",
+//     "keywords": ["thời hạn hộ chiếu phổ thông", "hộ chiếu phổ thông giá trị mấy năm"],
+//     "answer": "Hộ chiếu phổ thông cấp cho người từ đủ 14 tuổi trở lên có thời hạn 10 năm; cho người dưới 14 tuổi có thời hạn 5 năm và không được gia hạn.",
+//     "law_ref": "Điều 7, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Trách nhiệm của công dân khi xuất cảnh là gì?",
+//     "keywords": ["trách nhiệm khi xuất cảnh", "nghĩa vụ khi xuất cảnh"],
+//     "answer": "Công dân phải xuất trình giấy tờ hợp lệ, tuân thủ quy định về kiểm soát xuất nhập cảnh, chấp hành quyết định của cơ quan chức năng.",
+//     "law_ref": "Điều 5, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Công dân có quyền gì khi xuất cảnh?",
+//     "keywords": ["quyền công dân khi xuất cảnh", "quyền xuất cảnh"],
+//     "answer": "Công dân có quyền xuất cảnh, nhập cảnh trừ trường hợp bị cấm hoặc tạm hoãn theo quy định pháp luật.",
+//     "law_ref": "Điều 4, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Khi nào công dân bị thu hồi hộ chiếu?",
+//     "keywords": ["bị thu hồi hộ chiếu", "trường hợp thu hồi hộ chiếu"],
+//     "answer": "Hộ chiếu bị thu hồi nếu được cấp không đúng thẩm quyền, giả mạo hồ sơ hoặc sử dụng cho mục đích vi phạm pháp luật.",
+//     "law_ref": "Điều 28, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   },
+//   {
+//     "question": "Ai có thẩm quyền cấp hộ chiếu?",
+//     "keywords": ["thẩm quyền cấp hộ chiếu", "cơ quan nào cấp hộ chiếu"],
+//     "answer": "Cơ quan Quản lý xuất nhập cảnh Bộ Công an và Công an cấp tỉnh có thẩm quyền cấp hộ chiếu cho công dân Việt Nam trong nước.",
+//     "law_ref": "Điều 15, Luật 49/2019/QH14",
+//     "intent": "luật"
+//   }
+// ]

@@ -1,12 +1,12 @@
 # server/services/vector_rag/rag_config.py
 """
-RAG Config với VIETNAMESE LEGAL OPTIMIZED MODELS - FIXED
+RAG Config - CẬP NHẬT: Switch to best embedding model
 """
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
-# Load environment variables from .env
+# Load environment variables
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -16,27 +16,25 @@ except ImportError:
 except Exception as e:
     print(f"⚠️ Failed to load .env: {e}")
 
-# 🔥 VIETNAMESE LEGAL OPTIMIZED EMBEDDING MODELS - TESTED & PROVEN
+# CẬP NHẬT: VIETNAMESE EMBEDDING MODELS - Fixed order
 VIETNAMESE_EMBEDDING_MODELS = {
-    # Option 1: BEST for Vietnamese legal (recommended)
-    'keepitreal': 'keepitreal/vietnamese-sbert',
+    # CẬP NHẬT: Best choice first
+    'e5_base': 'intfloat/multilingual-e5-base',        # RECOMMENDED - Most reliable
     
-    # Option 2: Multilingual but strong Vietnamese
-    'intfloat': 'intfloat/multilingual-e5-base',
+    # Backup options
+    'minilm': 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',  # Lightweight
+    'e5_large': 'intfloat/multilingual-e5-large',      # High accuracy (if have GPU)
     
-    # Option 3: Light but effective
-    'paraphrase': 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+    # Vietnamese-specific (test only)
+    'keepitreal': 'keepitreal/vietnamese-sbert',        # Test only
     
-    # Option 4: Large for high accuracy (if have GPU)
-    'intfloat-large': 'intfloat/multilingual-e5-large',
-    
-    # Option 5: Current buggy one (avoid)
-    'dangvantuan': 'dangvantuan/vietnamese-embedding'
+    # CẬP NHẬT: REMOVED - Known issues
+    # 'dangvantuan': 'dangvantuan/vietnamese-embedding'  # ❌ REMOVED due to outlier issues
 }
 
 @dataclass
 class RAGConfig:
-    """Cấu hình chính với VIETNAMESE LEGAL OPTIMIZED MODELS"""
+    """Cấu hình chính - CẬP NHẬT embedding model"""
     
     # Paths
     domain: str = "xuatnhapcanh"
@@ -45,18 +43,18 @@ class RAGConfig:
     vector_store_path: str = "./dataset/xuatnhapcanh/vector_store"
     web_cache_path: str = "./dataset/xuatnhapcanh/web_cache"
     
-    # Vector Store - 🔥 SWITCH TO VIETNAMESE LEGAL OPTIMIZED MODEL
+    # Vector Store - CẬP NHẬT: Switch to best embedding model
     vector_collection_name: str = "xuatnhapcanh_docs"
-    embedding_model: str = VIETNAMESE_EMBEDDING_MODELS['keepitreal']  # BEST for Vietnamese legal
+    embedding_model: str = VIETNAMESE_EMBEDDING_MODELS['e5_base']  # ✅ FIXED: Use e5-base
     
-    # 🔥 ENHANCED Chunking for legal documents
-    chunk_size: int = 800        # Increased from 600 for better context
-    chunk_overlap: int = 100     # Increased from 50 for better continuity
-    search_k: int = 8           # Increased from 5 for better recall
+    # CẬP NHẬT: Enhanced chunking for legal documents
+    chunk_size: int = 800        
+    chunk_overlap: int = 100     
+    search_k: int = 8           
     
-    # 🔥 STRICTER Search thresholds (not too relaxed)
-    min_similarity_threshold: float = 0.15  # NEW: minimum similarity for results
-    vector_search_threshold: float = 0.1    # Current relaxed threshold
+    # CẬP NHẬT: Adjusted thresholds for e5-base
+    min_similarity_threshold: float = 0.15  
+    vector_search_threshold: float = 0.1    
     
     # LLM Settings
     gemini_api_key: Optional[str] = None
@@ -66,12 +64,12 @@ class RAGConfig:
     temperature: float = 0.1
     max_tokens: int = 1000
     
-    # Web Settings - 🔥 ENHANCED for 11 procedures
+    # Web Settings
     web_base_url: str = "https://dichvucong.bocongan.gov.vn"
     web_cache_ttl: int = 7200
-    request_timeout: int = 25     # Increased from 20
+    request_timeout: int = 25
     web_priority: bool = True
-    force_web_crawl: bool = True  # NEW: Force crawl all 11 procedures
+    force_web_crawl: bool = True
     
     def __post_init__(self):
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -80,27 +78,39 @@ class RAGConfig:
             os.makedirs(path, exist_ok=True)
 
     def switch_embedding_model(self, model_key: str):
-        """Switch to different embedding model"""
+        """CẬP NHẬT: Switch embedding model"""
         if model_key in VIETNAMESE_EMBEDDING_MODELS:
             old_model = self.embedding_model
             self.embedding_model = VIETNAMESE_EMBEDDING_MODELS[model_key]
             print(f"🔄 Switched embedding model:")
             print(f"   From: {old_model}")
             print(f"   To:   {self.embedding_model}")
+            
+            # CẬP NHẬT: Adjust thresholds for different models
+            if model_key == 'e5_base':
+                self.min_similarity_threshold = 0.15
+                self.vector_search_threshold = 0.1
+            elif model_key == 'minilm':
+                self.min_similarity_threshold = 0.2
+                self.vector_search_threshold = 0.15
+            elif model_key == 'e5_large':
+                self.min_similarity_threshold = 0.1
+                self.vector_search_threshold = 0.05
+            
+            print(f"   Thresholds: sim={self.min_similarity_threshold}, search={self.vector_search_threshold}")
             return True
         else:
             print(f"❌ Unknown model key: {model_key}")
             print(f"✅ Available models: {list(VIETNAMESE_EMBEDDING_MODELS.keys())}")
             return False
 
+# Document Config (unchanged)
 @dataclass  
 class DocumentConfig:
-    """Cấu hình xử lý văn bản - ENHANCED for legal structure"""
+    """Cấu hình xử lý văn bản"""
     
     supported_formats: List[str] = None
     vietnamese_legal_patterns: Dict[str, str] = None
-    
-    # 🔥 NEW: Enhanced legal structure detection
     legal_document_indicators: List[str] = None
     section_priority_order: List[str] = None
     
@@ -110,19 +120,15 @@ class DocumentConfig:
         
         if self.vietnamese_legal_patterns is None:
             self.vietnamese_legal_patterns = {
-                # 🔥 ENHANCED patterns with more precision
                 'chuong': r'(?:^|\n)\s*Chương\s+([IVX\d]+)\s*[.:]?\s*([^\n]*)',
                 'dieu': r'(?:^|\n)\s*Điều\s+(\d+[a-z]?)\s*[.:]?\s*([^\n]*)', 
                 'khoan': r'(?:^|\n)\s*(\d+)\.\s+([^\n]+)',
                 'diem': r'(?:^|\n)\s*([a-z]+)\)\s+([^\n]+)',
-                
-                # NEW: More specific patterns
                 'legal_reference': r'(Luật|Nghị định|Thông tư|Quyết định)\s+số\s+\d+[^\n]*',
                 'article_full': r'Điều\s+(\d+[a-z]?)\s+([^\n]+?)(?=\n|$)',
                 'section_header': r'(?:^|\n)((?:Mục|Phần|Tiết)\s+[IVX\d]+[^\n]*)',
             }
         
-        # 🔥 NEW: Legal document type indicators
         if self.legal_document_indicators is None:
             self.legal_document_indicators = [
                 'luật số', 'nghị định số', 'thông tư số', 'quyết định số',
@@ -130,30 +136,24 @@ class DocumentConfig:
                 'có hiệu lực', 'ban hành', 'quy định chi tiết'
             ]
         
-        # 🔥 NEW: Section priority for chunking
         if self.section_priority_order is None:
             self.section_priority_order = [
-                'chuong',      # Chương (highest level)
-                'dieu',        # Điều (article level)
-                'khoan',       # Khoản (paragraph level)  
-                'diem'         # Điểm (point level)
+                'chuong', 'dieu', 'khoan', 'diem'
             ]
 
+# Web Config (unchanged)
 @dataclass
 class WebConfig:
-    """Cấu hình xử lý dữ liệu web - ENHANCED for 11 procedures"""
+    """Cấu hình xử lý dữ liệu web"""
     
     important_sections: List[str] = None
     section_aliases: Dict[str, List[str]] = None
     extraction_patterns: Dict[str, str] = None
-    
-    # 🔥 NEW: Enhanced for procedure processing
     procedure_section_mapping: Dict[str, List[str]] = None
     section_extraction_order: List[str] = None
     
     def __post_init__(self):
         if self.important_sections is None:
-            # 🔥 REORDERED by importance for legal queries
             self.important_sections = [
                 "Mã thủ tục", "Tên thủ tục", "Cơ quan thực hiện",
                 "Yêu cầu - điều kiện", "Thành phần hồ sơ", 
@@ -187,14 +187,11 @@ class WebConfig:
                 'bullet_list': r'([-+*]\s*[^\n]+)',
                 'money_pattern': r'(\d+(?:,\d+)*(?:\.\d+)?\s*(?:đồng|VNĐ|vnđ))',
                 'time_pattern': r'(\d+\s*(?:ngày|tháng|năm|tuần|giờ|phút))',
-                
-                # 🔥 NEW: Enhanced patterns for better extraction
                 'legal_reference_pattern': r'((?:Luật|Nghị định|Thông tư|Quyết định)\s+số\s+\d+[^\n.;]*)',
                 'procedure_step_pattern': r'(?:Bước|Giai đoạn)\s*\d+[^\n]*',
                 'requirement_pattern': r'(?:Điều kiện|Yêu cầu|Đối tượng)[^\n:]*:([^\n]+)',
             }
         
-        # 🔥 NEW: Procedure section mapping for better search
         if self.procedure_section_mapping is None:
             self.procedure_section_mapping = {
                 'hồ sơ': ['Thành phần hồ sơ', 'Yêu cầu - điều kiện'],
@@ -209,7 +206,6 @@ class WebConfig:
                 'pháp lý': ['Căn cứ pháp lý']
             }
         
-        # 🔥 NEW: Extraction order for optimal chunking
         if self.section_extraction_order is None:
             self.section_extraction_order = [
                 "Mã thủ tục", "Tên thủ tục", 
@@ -219,7 +215,7 @@ class WebConfig:
                 "Căn cứ pháp lý", "Kết quả thực hiện", "Biểu mẫu"
             ]
 
-# 🔥 ENHANCED Web procedures - All 11 procedures with better mapping
+# Web procedures (unchanged)
 XUATNHAPCANH_WEB_PROCEDURES = {
     "Cấp hộ chiếu phổ thông ở trong nước (thực hiện tại cấp tỉnh)": "29497",
     "Gia hạn tạm trú cho người đã được cấp giấy miễn thị thực tại Phòng Quản lý xuất nhập cảnh Công an tỉnh": "35700",
@@ -234,7 +230,7 @@ XUATNHAPCANH_WEB_PROCEDURES = {
     "Trình báo mất thẻ ABTC (thực hiện tại cấp tỉnh)": "54713"
 }
 
-# 🔥 ENHANCED Keywords with legal context
+# Keywords (unchanged)
 XUATNHAPCANH_KEYWORDS = {
     'passport': {
         'main': ['hộ chiếu', 'passport'],
@@ -260,27 +256,55 @@ XUATNHAPCANH_KEYWORDS = {
     }
 }
 
-# 🔥 ENHANCED Legal prompt with Vietnamese context
-ENHANCED_LEGAL_PROMPT = """Bạn là chuyên gia tư vấn PHÁP LUẬT XUẤT NHẬP CẢNH Việt Nam với chuyên môn cao.
+# CẬP NHẬT: Enhanced prompts cho 3 context types
+LEGAL_DOMINANT_PROMPT = """Bạn là chuyên gia PHÁP LUẬT xuất nhập cảnh Việt Nam.
 
-NGUYÊN TẮC TRẢ LỜI:
-✅ Ưu tiên thông tin từ LUẬT, NGHỊ ĐỊNH, THÔNG TƯ (nguồn vector)
-✅ Bổ sung thông tin THỦ TỤC HÀNH CHÍNH từ Cổng dịch vụ công (nguồn web)
-✅ Trích dẫn CHÍNH XÁC Điều, Khoản, Điểm của văn bản pháp luật
-✅ Nêu rõ tên văn bản và năm ban hành
+NGUYÊN TẮC TRẢ LỜI (LEGAL FOCUS):
+✅ Ưu tiên trích dẫn CHÍNH XÁC từ văn bản pháp luật
+✅ Nêu rõ Điều, Khoản, Điểm cụ thể
+✅ Ghi rõ tên văn bản và năm ban hành
+✅ Giải thích ý nghĩa pháp lý
 
-NGỮ CẢNH THAM KHẢO:
+THÔNG TIN PHÁP LUẬT:
 {context}
 
 CÂU HỎI: {question}
 
-YÊU CẦU TRÍCH DẪN:
-- Nếu hỏi về điều luật cụ thể → Trích dẫn chính xác nội dung điều đó
-- Nếu hỏi về thủ tục → Ưu tiên thông tin từ Cổng dịch vụ công
-- Nếu hỏi về quy định → Nêu rõ căn cứ pháp lý
+YÊU CẦU: Trả lời dựa trên VĂN BẢN PHÁP LUẬT, trích dẫn chính xác điều khoản.
 
-❌ TUYỆT ĐỐI không đưa ra thông tin không có trong tài liệu
-❌ TUYỆT ĐỐI không suy đoán hay bịa đặt thông tin
+TRẢ LỜI:"""
+
+PROCEDURE_DOMINANT_PROMPT = """Bạn là chuyên viên THỦ TỤC HÀNH CHÍNH xuất nhập cảnh.
+
+NGUYÊN TẮC TRẢ LỜI (PROCEDURE FOCUS):
+✅ Hướng dẫn cụ thể từng bước thực hiện
+✅ Nêu rõ hồ sơ, lệ phí, thời gian, địa điểm
+✅ Thông tin thực tế từ Cổng dịch vụ công
+✅ Tư vấn thực tiễn cho người dân
+
+THÔNG TIN THỦ TỤC:
+{context}
+
+CÂU HỎI: {question}
+
+YÊU CẦU: Hướng dẫn cụ thể thủ tục thực hiện, nêu rõ các bước.
+
+TRẢ LỜI:"""
+
+MIXED_CONTEXT_PROMPT = """Bạn là chuyên gia TƯ VẤN PHÁP LUẬT và THỦ TỤC xuất nhập cảnh.
+
+NGUYÊN TẮC TRẢ LỜI (MIXED):
+✅ Kết hợp căn cứ pháp lý + hướng dẫn thực tiễn
+✅ Trích dẫn điều luật + giải thích thủ tục
+✅ Đảm bảo tính chính xác và thực tiễn
+✅ Phân biệt rõ "quy định pháp luật" vs "thủ tục thực hiện"
+
+THÔNG TIN THAM KHẢO:
+{context}
+
+CÂU HỎI: {question}
+
+YÊU CẦU: Trả lời đầy đủ cả khía cạnh pháp lý và thủ tục thực hiện.
 
 TRẢ LỜI:"""
 
@@ -289,12 +313,11 @@ config = RAGConfig()
 doc_config = DocumentConfig()
 web_config = WebConfig()
 
-# Helper functions
+# Helper functions (unchanged except embedding model)
 def get_procedure_code_enhanced(query: str) -> Optional[str]:
-    """Tìm mã thủ tục từ query với enhanced matching"""
+    """Tìm mã thủ tục từ query"""
     query_lower = query.lower()
     
-    # Direct procedure name matching
     best_match = None
     best_score = 0
     
@@ -302,27 +325,21 @@ def get_procedure_code_enhanced(query: str) -> Optional[str]:
         procedure_words = set(procedure_name.lower().split())
         query_words = set(query_lower.split())
         
-        # Calculate similarity score
         intersection = procedure_words & query_words
-        union = procedure_words | query_words
-        
         if len(intersection) > 0:
-            jaccard_score = len(intersection) / len(union)
+            jaccard_score = len(intersection) / len(query_words | procedure_words)
             word_coverage = len(intersection) / len(procedure_words)
+            score = (jaccard_score + word_coverage) / 2
             
-            # Combined score
-            score = jaccard_score * 0.3 + word_coverage * 0.7
-            
-            if score > best_score and score > 0.3:  # Minimum threshold
+            if score > best_score and score > 0.3:
                 best_score = score
                 best_match = code
     
     if best_match:
         return best_match
     
-    # Fallback to keyword-based matching
     keyword_mapping = {
-        'hộ chiếu': ["29497", "35714", "35692"],  # Multiple passport procedures
+        'hộ chiếu': ["29497", "35714", "35692"],
         'visa': ["35697"],
         'thị thực': ["35697", "35700"],
         'tạm trú': ["52392", "35696"],
@@ -334,7 +351,7 @@ def get_procedure_code_enhanced(query: str) -> Optional[str]:
     
     for keyword, codes in keyword_mapping.items():
         if keyword in query_lower:
-            return codes[0]  # Return first matching procedure
+            return codes[0]
     
     return None
 
@@ -344,6 +361,7 @@ def get_config_summary_enhanced() -> dict:
         'domain': config.domain,
         'embedding_model': config.embedding_model,
         'available_models': list(VIETNAMESE_EMBEDDING_MODELS.keys()),
+        'recommended_model': 'e5_base',
         'chunk_size': config.chunk_size,
         'chunk_overlap': config.chunk_overlap,
         'search_k': config.search_k,
@@ -353,15 +371,35 @@ def get_config_summary_enhanced() -> dict:
         'legal_patterns': len(doc_config.vietnamese_legal_patterns),
         'has_gemini_key': bool(config.gemini_api_key),
         'enhanced_features': [
-            'vietnamese_legal_optimized_embedding',
-            'enhanced_chunking_with_overlap',
-            'stricter_similarity_thresholds',
-            'comprehensive_procedure_mapping',
-            'legal_structure_preservation'
+            'e5_base_embedding_model',
+            'entity_reranking_support',
+            'query_normalization',
+            'separated_context_building',
+            'smart_prompt_templates',
+            'legal_structure_chunking'
         ]
     }
 
 def switch_to_best_vietnamese_model():
-    """Quick switch to best Vietnamese model"""
-    config.switch_embedding_model('keepitreal')
+    """CẬP NHẬT: Quick switch to best model"""
+    config.switch_embedding_model('e5_base')
     return config.embedding_model
+
+# CẬP NHẬT: New function for model testing
+def test_embedding_model(model_key: str) -> Dict[str, Any]:
+    """Test embedding model with sample queries"""
+    if model_key not in VIETNAMESE_EMBEDDING_MODELS:
+        return {'success': False, 'error': f'Unknown model: {model_key}'}
+    
+    test_queries = [
+        "Điều kiện cấp hộ chiếu phổ thông",
+        "Thủ tục làm thị thực du lịch",
+        "Lệ phí gia hạn tạm trú"
+    ]
+    
+    return {
+        'success': True,
+        'model': VIETNAMESE_EMBEDDING_MODELS[model_key],
+        'test_queries': test_queries,
+        'recommendation': 'Run actual embedding test with these queries'
+    }

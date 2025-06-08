@@ -1,6 +1,6 @@
 # server/services/vector_rag/context_optimizer.py
 """
-Context Optimizer - OPTIMIZED & CONCISE
+Context Optimizer - SỬA LOGIC: Phân tách rõ ràng LUẬT vs THỦ TỤC
 """
 import re
 from typing import List, Dict, Any
@@ -21,22 +21,28 @@ class OptimizedContext:
     vector_sources: int
 
 class VietnameseContextOptimizer:
-    """Simplified context optimizer"""
+    """Context optimizer - SỬA LOGIC phân tách nguồn"""
     
     def __init__(self):
         self.max_context_length = 1800
         self.max_sources = 5
         self.min_section_length = 40
         
-        # Key quality indicators
-        self.quality_keywords = [
-            'điều', 'khoản', 'quy định', 'thủ tục', 'hồ sơ',
-            'lệ phí', 'thời gian', 'cơ quan', 'điều kiện',
-            'hộ chiếu', 'thị thực', 'tạm trú', 'thường trú'
+        # KEY FIX: Phân biệt rõ content types
+        self.legal_indicators = [
+            'điều', 'khoản', 'điểm', 'luật số', 'nghị định số', 'thông tư số',
+            'theo quy định tại điều', 'căn cứ luật', 'quy định chi tiết'
+        ]
+        
+        self.procedure_indicators = [
+            'mã thủ tục', 'tên thủ tục', 'yêu cầu - điều kiện', 'thành phần hồ sơ',
+            'trình tự thực hiện', 'cách thức thực hiện', 'thời hạn giải quyết',
+            'phí', 'lệ phí', 'cơ quan thực hiện', 'căn cứ pháp lý',
+            'kết quả thực hiện', 'biểu mẫu', 'hồ sơ gồm'
         ]
     
     def optimize_context(self, search_results: List[Dict], query_features: Any = None) -> OptimizedContext:
-        """Optimize context - simplified"""
+        """SỬA LOGIC: Phân tách rõ ràng LUẬT vs THỦ TỤC"""
         
         if not search_results:
             return OptimizedContext(
@@ -49,26 +55,26 @@ class VietnameseContextOptimizer:
                 vector_sources=0
             )
         
-        # 1. Score and sort results
-        scored_results = self._score_results(search_results)
+        # 1. PHÂN LOẠI results thành legal vs procedure
+        legal_results, procedure_results = self._classify_results(search_results)
         
-        # 2. Select top sources
-        selected_sources = self._select_top_sources(scored_results)
+        # 2. BUILD context with clear separation  
+        context = self._build_separated_context(legal_results, procedure_results)
         
-        # 3. Build context
-        context, source_summary = self._build_context(selected_sources)
+        # 3. Create source summary
+        source_summary = self._create_source_summary(legal_results, procedure_results)
         
         # 4. Calculate confidence
-        confidence = self._calculate_confidence(selected_sources, context)
+        confidence = self._calculate_confidence(legal_results + procedure_results, context)
         
         # 5. Determine context type
-        web_count = len([s for s in selected_sources if s.get('metadata', {}).get('content_type') == 'web_procedure'])
-        vector_count = len([s for s in selected_sources if s.get('metadata', {}).get('content_type') == 'legal_document'])
+        web_count = len(procedure_results)
+        vector_count = len(legal_results)
         
-        if web_count > vector_count:
-            context_type = 'web_dominant'
-        elif vector_count > web_count:
+        if vector_count > web_count:
             context_type = 'vector_dominant'
+        elif web_count > vector_count:
+            context_type = 'web_dominant'
         else:
             context_type = 'balanced'
         
@@ -77,142 +83,138 @@ class VietnameseContextOptimizer:
             confidence_score=confidence,
             source_summary=source_summary,
             context_type=context_type,
-            total_sources=len(selected_sources),
+            total_sources=len(search_results),
             web_sources=web_count,
             vector_sources=vector_count
         )
     
-    def _score_results(self, results: List[Dict]) -> List[Dict]:
-        """Score results based on quality"""
-        scored = []
+    def _classify_results(self, results: List[Dict]) -> tuple:
+        """PHÂN LOẠI results thành legal vs procedure"""
+        legal_results = []
+        procedure_results = []
         
         for result in results:
-            content = result.get('content', '')
-            score = result.get('score', 0.5)
+            content = result.get('content', '').lower()
+            metadata = result.get('metadata', {})
+            content_type = metadata.get('content_type', '')
             
-            # Content quality boost
-            content_lower = content.lower()
-            keyword_count = sum(1 for kw in self.quality_keywords if kw in content_lower)
-            quality_boost = min(keyword_count * 0.1, 0.4)
+            # Score by content type
+            legal_score = self._score_legal_content(content)
+            procedure_score = self._score_procedure_content(content)
             
-            # Length penalty for too short content
-            if len(content) < 100:
-                score -= 0.2
-            
-            # Legal structure bonus
-            if any(pattern in content_lower for pattern in ['điều ', 'khoản ', 'theo quy định']):
+            # Classify based on metadata + content score
+            if content_type == 'legal_document' or legal_score > procedure_score:
+                legal_results.append(result)
+            elif content_type == 'web_procedure' or procedure_score > legal_score:
+                procedure_results.append(result)
+            else:
+                # Mixed - add to stronger category
+                if legal_score >= procedure_score:
+                    legal_results.append(result)
+                else:
+                    procedure_results.append(result)
+        
+        return legal_results[:3], procedure_results[:3]  # Top 3 each
+    
+    def _score_legal_content(self, content: str) -> float:
+        """Score legal content"""
+        score = 0.0
+        for indicator in self.legal_indicators:
+            if indicator in content:
                 score += 0.2
-            
-            final_score = min(score + quality_boost, 1.0)
-            
-            result_copy = result.copy()
-            result_copy['final_score'] = final_score
-            scored.append(result_copy)
-        
-        return sorted(scored, key=lambda x: x['final_score'], reverse=True)
+        return min(score, 1.0)
     
-    def _select_top_sources(self, scored_results: List[Dict]) -> List[Dict]:
-        """Select top sources"""
-        # Filter by minimum quality
-        quality_threshold = 0.2
-        filtered = [r for r in scored_results if r['final_score'] >= quality_threshold]
-        
-        # Take top sources
-        return filtered[:self.max_sources]
+    def _score_procedure_content(self, content: str) -> float:
+        """Score procedure content"""
+        score = 0.0
+        for indicator in self.procedure_indicators:
+            if indicator in content:
+                score += 0.15
+        return min(score, 1.0)
     
-    def _build_context(self, sources: List[Dict]) -> tuple:
-        """Build context from sources"""
-        if not sources:
-            return "", "Không có nguồn"
-        
+    def _build_separated_context(self, legal_results: List[Dict], procedure_results: List[Dict]) -> str:
+        """BUILD context với phân tách rõ ràng"""
         context_parts = []
-        source_info = []
         current_length = 0
         
-        for i, source in enumerate(sources):
-            content = source.get('content', '').strip()
-            
-            if len(content) < self.min_section_length:
-                continue
-            
-            # Add section header
-            source_type = 'WEB' if source.get('metadata', {}).get('content_type') == 'web_procedure' else 'LUẬT'
-            section_header = f"\n--- NGUỒN {i+1} ({source_type}) ---\n"
-            
-            # Check if fits
-            estimated_length = current_length + len(section_header) + len(content)
-            
-            if estimated_length > self.max_context_length:
-                # Truncate content to fit
-                remaining_space = self.max_context_length - current_length - len(section_header) - 50
-                if remaining_space > 100:
-                    content = content[:remaining_space] + "..."
-                else:
-                    break
-            
-            # Add to context
-            formatted_section = section_header + content
-            context_parts.append(formatted_section)
-            current_length += len(formatted_section)
-            
-            # Track source info
-            source_name = source.get('metadata', {}).get('file_name', source.get('title', 'Unknown'))
-            source_info.append(f"{source_type}: {source_name}")
+        # Section 1: VĂN BẢN PHÁP LUẬT
+        if legal_results:
+            legal_section = self._build_legal_section(legal_results)
+            if legal_section and len(legal_section) > 50:
+                context_parts.append("=== VĂN BẢN PHÁP LUẬT ===")
+                context_parts.append(legal_section)
+                current_length += len(legal_section) + 30
         
-        final_context = '\n'.join(context_parts)
-        source_summary = '; '.join(source_info[:3])
+        # Section 2: THỦ TỤC HÀNH CHÍNH  
+        if procedure_results and current_length < self.max_context_length - 200:
+            procedure_section = self._build_procedure_section(procedure_results)
+            if procedure_section and len(procedure_section) > 50:
+                context_parts.append("\n=== THỦ TỤC HÀNH CHÍNH ===")
+                context_parts.append(procedure_section)
         
-        return final_context, source_summary
+        return '\n'.join(context_parts)
     
-    def _calculate_confidence(self, sources: List[Dict], context: str) -> float:
-        """Calculate confidence score"""
-        if not sources or not context:
+    def _build_legal_section(self, legal_results: List[Dict]) -> str:
+        """Build legal section"""
+        parts = []
+        for result in legal_results[:2]:  # Top 2
+            content = result.get('content', '').strip()
+            if len(content) >= self.min_section_length:
+                # Truncate if too long
+                if len(content) > 600:
+                    content = content[:600] + "..."
+                parts.append(content)
+        
+        return '\n\n'.join(parts)
+    
+    def _build_procedure_section(self, procedure_results: List[Dict]) -> str:
+        """Build procedure section"""
+        parts = []
+        for result in procedure_results[:2]:  # Top 2
+            content = result.get('content', '').strip()
+            if len(content) >= self.min_section_length:
+                # Truncate if too long
+                if len(content) > 600:
+                    content = content[:600] + "..."
+                parts.append(content)
+        
+        return '\n\n'.join(parts)
+    
+    def _create_source_summary(self, legal_results: List[Dict], procedure_results: List[Dict]) -> str:
+        """Create source summary"""
+        sources = []
+        
+        for result in legal_results[:2]:
+            source = result.get('metadata', {}).get('file_name', 'Văn bản pháp luật')
+            sources.append(f"LUẬT: {source}")
+        
+        for result in procedure_results[:2]:
+            source = result.get('metadata', {}).get('title', 'Thủ tục hành chính')
+            sources.append(f"TTHC: {source}")
+        
+        return '; '.join(sources)
+    
+    def _calculate_confidence(self, all_results: List[Dict], context: str) -> float:
+        """Calculate confidence"""
+        if not all_results or not context:
             return 0.0
         
-        # Base confidence from source scores
-        avg_score = sum(s.get('final_score', 0.5) for s in sources) / len(sources)
+        # Base confidence
+        avg_score = sum(r.get('score', 0.5) for r in all_results) / len(all_results)
         
-        # Source count factor
-        count_factor = min(len(sources) / 3.0, 1.0)
+        # Section separation bonus
+        has_legal = '=== VĂN BẢN PHÁP LUẬT ===' in context
+        has_procedure = '=== THỦ TỤC HÀNH CHÍNH ===' in context
         
-        # Context quality factor
-        context_keywords = sum(1 for kw in self.quality_keywords if kw in context.lower())
-        quality_factor = min(context_keywords / 5.0, 1.0)
+        separation_bonus = 0.0
+        if has_legal and has_procedure:
+            separation_bonus = 0.2
+        elif has_legal or has_procedure:
+            separation_bonus = 0.1
         
-        # Diversity bonus
-        has_web = any(s.get('metadata', {}).get('content_type') == 'web_procedure' for s in sources)
-        has_vector = any(s.get('metadata', {}).get('content_type') == 'legal_document' for s in sources)
-        diversity_bonus = 0.2 if (has_web and has_vector) else 0.1
+        # Content quality
+        quality_keywords = sum(1 for kw in ['điều', 'khoản', 'thủ tục', 'hồ sơ'] if kw in context.lower())
+        quality_factor = min(quality_keywords / 4.0, 0.2)
         
-        final_confidence = (avg_score * 0.4 + count_factor * 0.2 + quality_factor * 0.2) + diversity_bonus
-        return min(final_confidence + 0.15, 1.0)  # Base boost
-    
-    def validate_context_quality(self, context: str, query: str) -> Dict[str, Any]:
-        """Validate context quality"""
-        if not context or len(context) < 50:
-            return {
-                'is_valid': False,
-                'reason': 'Context quá ngắn',
-                'quality_score': 0.0
-            }
-        
-        # Check keyword overlap
-        query_words = set(re.findall(r'\b\w{3,}\b', query.lower()))
-        context_words = set(re.findall(r'\b\w{3,}\b', context.lower()))
-        overlap = len(query_words & context_words)
-        
-        if overlap < 1:
-            return {
-                'is_valid': False,
-                'reason': 'Context không liên quan',
-                'quality_score': 0.2
-            }
-        
-        quality_score = min(overlap / max(len(query_words), 1) + 0.4, 1.0)
-        
-        return {
-            'is_valid': True,
-            'quality_score': quality_score,
-            'word_overlap': overlap,
-            'context_length': len(context)
-        }
+        final_confidence = avg_score * 0.5 + separation_bonus + quality_factor + 0.2
+        return min(final_confidence, 1.0)

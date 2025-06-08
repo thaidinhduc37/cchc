@@ -1,8 +1,6 @@
-from services.vector_rag.rag_config import config
-from services.vector_rag.document_processor import Document
-from services.vector_rag.embeddings import VietnameseEmbeddingModel# server/services/vector_rag/vector_store.py
+# server/services/vector_rag/vector_store.py  
 """
-Vector Store - OPTIMIZED with FAISS
+Vector Store - SỬA LOGIC: Thêm entity reranking
 """
 import os
 import json
@@ -19,10 +17,14 @@ try:
 except ImportError:
     FAISS_AVAILABLE = False
 
+from services.vector_rag.rag_config import config
+from services.vector_rag.document_processor import Document
+from services.vector_rag.embeddings import VietnameseEmbeddingModel
+
 logger = logging.getLogger(__name__)
 
 class VectorStore:
-    """Optimized Vector Store with FAISS"""
+    """Vector Store với entity reranking"""
     
     def __init__(self):
         self.config = config
@@ -45,6 +47,18 @@ class VectorStore:
         # Settings
         self.similarity_threshold = config.min_similarity_threshold
         
+        # SỬA LOGIC: Entity reranking settings
+        self.critical_entities = {
+            'hộ chiếu': ['hộ chiếu', 'passport', 'ho chieu'],
+            'thị thực': ['thị thực', 'visa', 'thi thuc'],
+            'tạm trú': ['tạm trú', 'tam tru'],
+            'thường trú': ['thường trú', 'thuong tru'],
+            'trẻ em': ['trẻ em', 'tre em', 'children'],
+            'lệ phí': ['lệ phí', 'le phi', 'phí'],
+            'điều kiện': ['điều kiện', 'dieu kien', 'yêu cầu'],
+            'hồ sơ': ['hồ sơ', 'ho so', 'giấy tờ']
+        }
+        
         # Stats
         self.stats = {
             'total_documents': 0,
@@ -60,12 +74,10 @@ class VectorStore:
             raise ImportError("FAISS not installed. Run: pip install faiss-cpu")
         
         try:
-            # Load existing index
             if os.path.exists(self.index_file):
                 self._load_index()
                 logger.info(f"📂 Loaded vector store: {len(self.documents)} documents")
             else:
-                # Create new index
                 self._create_new_index()
                 logger.info("✨ Created new FAISS index")
                 
@@ -75,7 +87,6 @@ class VectorStore:
     
     def _create_new_index(self):
         """Create new FAISS index"""
-        # Use IndexFlatIP for cosine similarity
         self.index = faiss.IndexFlatIP(self.dimension)
         self.documents = []
         self.metadatas = []
@@ -84,15 +95,12 @@ class VectorStore:
     def _load_index(self):
         """Load FAISS index and documents"""
         try:
-            # Load index
             self.index = faiss.read_index(self.index_file)
             
-            # Load documents
             if os.path.exists(self.docs_file):
                 with open(self.docs_file, 'rb') as f:
                     self.documents = pickle.load(f)
             
-            # Load metadata
             if os.path.exists(self.meta_file):
                 with open(self.meta_file, 'rb') as f:
                     self.metadatas = pickle.load(f)
@@ -108,14 +116,11 @@ class VectorStore:
         try:
             os.makedirs(self.vector_store_path, exist_ok=True)
             
-            # Save index
             faiss.write_index(self.index, self.index_file)
             
-            # Save documents
             with open(self.docs_file, 'wb') as f:
                 pickle.dump(self.documents, f)
             
-            # Save metadata
             with open(self.meta_file, 'wb') as f:
                 pickle.dump(self.metadatas, f)
             
@@ -161,7 +166,6 @@ class VectorStore:
         try:
             logger.info(f"Adding {len(documents)} documents...")
             
-            # Extract content and metadata
             texts = []
             doc_metadatas = []
             
@@ -174,7 +178,6 @@ class VectorStore:
                 logger.warning("No valid texts to add")
                 return False
             
-            # Generate embeddings
             logger.info("🧮 Generating embeddings...")
             embeddings = self.embedding_model.embed_documents(texts)
             
@@ -182,18 +185,13 @@ class VectorStore:
                 logger.error("❌ Embedding generation failed")
                 return False
             
-            # Convert to FAISS format
             embeddings_array = np.array(embeddings, dtype=np.float32)
-            faiss.normalize_L2(embeddings_array)  # Normalize for cosine similarity
+            faiss.normalize_L2(embeddings_array)
             
-            # Add to index
             self.index.add(embeddings_array)
-            
-            # Store documents and metadata
             self.documents.extend(texts)
             self.metadatas.extend(doc_metadatas)
             
-            # Save
             self._save_index()
             
             logger.info(f"✅ Added {len(texts)} documents")
@@ -205,8 +203,9 @@ class VectorStore:
     
     async def search(self, query: str, k: int = None, 
                     search_type: str = "normal",
-                    filter_metadata: Dict = None) -> List[Dict]:
-        """Search with legal optimization"""
+                    filter_metadata: Dict = None,
+                    query_entities: List[str] = None) -> List[Dict]:
+        """SỬA LOGIC: Search với entity reranking"""
         k = k or config.search_k
         
         try:
@@ -214,7 +213,6 @@ class VectorStore:
                 logger.warning("Vector store is empty")
                 return []
             
-            # Generate query embedding
             query_embedding = self.embedding_model.embed_query(query)
             
             if not query_embedding:
@@ -226,7 +224,13 @@ class VectorStore:
                 return await self._exact_legal_search(query, query_embedding, k)
             
             # Normal semantic search
-            return await self._semantic_search(query_embedding, k, filter_metadata)
+            results = await self._semantic_search(query_embedding, k * 2, filter_metadata)  # Get more for reranking
+            
+            # SỬA LOGIC: Apply entity reranking
+            if query_entities and results:
+                results = self._rerank_by_entities(results, query_entities, query)
+            
+            return results[:k]  # Return top k after reranking
             
         except Exception as e:
             logger.error(f"❌ Search failed: {e}")
@@ -249,32 +253,25 @@ class VectorStore:
         """Exact legal article search"""
         import re
         
-        # Extract legal reference
         query_lower = query.lower()
         
-        # Find article number
         article_match = re.search(r'điều\s+(\d+[a-z]?)', query_lower)
         article_num = article_match.group(1) if article_match else None
         
-        # Do semantic search first to get candidates
         candidates = await self._semantic_search(query_embedding, k * 2)
         
-        # Filter and boost exact matches
         exact_matches = []
         partial_matches = []
         
         for candidate in candidates:
             content = candidate['content'].lower()
-            metadata = candidate.get('metadata', {})
             
-            # Check for exact article match
             article_score = 0
             if article_num and f'điều {article_num}' in content:
                 article_score = 2.0
             elif article_num and f'điều{article_num}' in content:
                 article_score = 1.5
             
-            # Boost score
             enhanced_score = candidate['score'] + article_score
             
             enhanced_candidate = candidate.copy()
@@ -286,7 +283,6 @@ class VectorStore:
             else:
                 partial_matches.append(enhanced_candidate)
         
-        # Sort and combine
         exact_matches.sort(key=lambda x: x['enhanced_score'], reverse=True)
         partial_matches.sort(key=lambda x: x['enhanced_score'], reverse=True)
         
@@ -297,11 +293,9 @@ class VectorStore:
                               filter_metadata: Dict = None) -> List[Dict]:
         """Standard semantic search"""
         try:
-            # Convert to numpy
             query_vector = np.array([query_embedding], dtype=np.float32)
             faiss.normalize_L2(query_vector)
             
-            # Search
             similarities, indices = self.index.search(query_vector, k)
             
             results = []
@@ -309,15 +303,12 @@ class VectorStore:
                 if doc_idx >= len(self.documents):
                     continue
                 
-                # Apply similarity threshold
                 if similarity < self.similarity_threshold:
                     continue
                 
-                # Get document and metadata
                 content = self.documents[doc_idx]
                 metadata = self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {}
                 
-                # Apply metadata filter if provided
                 if filter_metadata:
                     if not self._match_metadata_filter(metadata, filter_metadata):
                         continue
@@ -331,12 +322,119 @@ class VectorStore:
                 
                 results.append(result)
             
-            logger.info(f"✅ Semantic search: {len(results)} results (threshold: {self.similarity_threshold})")
             return results
             
         except Exception as e:
             logger.error(f"Semantic search failed: {e}")
             return []
+    
+    def _rerank_by_entities(self, results: List[Dict], query_entities: List[str], query: str) -> List[Dict]:
+        """SỬA LOGIC: Rerank results by entity matching"""
+        if not query_entities:
+            return results
+        
+        logger.info(f"🔄 Reranking {len(results)} results by entities: {query_entities}")
+        
+        reranked = []
+        
+        for result in results:
+            content = result.get('content', '').lower()
+            original_score = result.get('score', 0.5)
+            
+            # Calculate entity matching score
+            entity_score = self._calculate_entity_score(content, query_entities)
+            
+            # Calculate final score
+            final_score = original_score + entity_score
+            
+            # Track entity matches for debugging
+            matched_entities = []
+            missing_entities = []
+            
+            for entity in query_entities:
+                if self._entity_exists_in_content(entity, content):
+                    matched_entities.append(entity)
+                else:
+                    missing_entities.append(entity)
+            
+            # Add enhanced result
+            enhanced_result = result.copy()
+            enhanced_result['entity_score'] = entity_score
+            enhanced_result['final_score'] = max(final_score, 0.0)
+            enhanced_result['matched_entities'] = matched_entities
+            enhanced_result['missing_entities'] = missing_entities
+            
+            reranked.append(enhanced_result)
+        
+        # Sort by final score
+        reranked.sort(key=lambda x: x['final_score'], reverse=True)
+        
+        # Filter out results with too many missing critical entities
+        filtered = []
+        for result in reranked:
+            critical_missing = [e for e in result['missing_entities'] 
+                              if e.lower() in self.critical_entities]
+            
+            # Skip if missing too many critical entities
+            if len(critical_missing) > 2:
+                logger.debug(f"❌ Filtered: missing {critical_missing}")
+                continue
+            
+            # Skip if final score too low
+            if result['final_score'] < 0.2:
+                logger.debug(f"❌ Filtered: score {result['final_score']:.3f}")
+                continue
+            
+            filtered.append(result)
+        
+        logger.info(f"✅ Reranked: {len(results)} → {len(filtered)} results")
+        return filtered
+    
+    def _calculate_entity_score(self, content: str, query_entities: List[str]) -> float:
+        """Calculate entity matching score"""
+        if not query_entities:
+            return 0.0
+        
+        score = 0.0
+        matched_count = 0
+        
+        for entity in query_entities:
+            if self._entity_exists_in_content(entity, content):
+                matched_count += 1
+                
+                # Bonus for critical entities
+                if entity.lower() in self.critical_entities:
+                    score += 0.15
+                else:
+                    score += 0.1
+        
+        # Penalty for missing entities
+        missing_count = len(query_entities) - matched_count
+        if missing_count > 0:
+            score -= missing_count * 0.1
+        
+        # Bonus for high match ratio
+        match_ratio = matched_count / len(query_entities)
+        if match_ratio >= 0.8:
+            score += 0.1
+        
+        return score
+    
+    def _entity_exists_in_content(self, entity: str, content: str) -> bool:
+        """Check if entity exists in content"""
+        entity_lower = entity.lower()
+        
+        # Direct match
+        if entity_lower in content:
+            return True
+        
+        # Check variants
+        if entity_lower in self.critical_entities:
+            variants = self.critical_entities[entity_lower]
+            if any(variant in content for variant in variants):
+                return True
+        
+        return False
     
     def _match_metadata_filter(self, metadata: Dict, filter_criteria: Dict) -> bool:
         """Check if metadata matches filter criteria"""
@@ -379,37 +477,16 @@ class VectorStore:
             'similarity_threshold': self.similarity_threshold,
             'index_size_mb': round(index_size_mb, 2),
             'last_updated': self.stats.get('last_updated'),
-            'faiss_index_type': str(type(self.index).__name__) if self.index else 'None'
+            'faiss_index_type': str(type(self.index).__name__) if self.index else 'None',
+            'critical_entities': len(self.critical_entities)
         }
     
     def clear_store(self):
         """Clear vector store"""
         self._create_new_index()
         
-        # Remove files
         for file_path in [self.index_file, self.docs_file, self.meta_file]:
             if os.path.exists(file_path):
                 os.remove(file_path)
         
         logger.info("🗑️ Vector store cleared")
-    
-    async def update_document(self, doc_index: int, new_document: Document) -> bool:
-        """Update a specific document (requires rebuild)"""
-        if doc_index >= len(self.documents):
-            return False
-        
-        try:
-            # Update document content and metadata
-            self.documents[doc_index] = new_document.content
-            self.metadatas[doc_index] = new_document.metadata
-            
-            # Note: FAISS doesn't support in-place updates
-            # Would need to rebuild index for embedding changes
-            logger.warning("Document updated but embeddings not regenerated. Consider rebuilding index.")
-            
-            self._save_index()
-            return True
-            
-        except Exception as e:
-            logger.error(f"Update document failed: {e}")
-            return False

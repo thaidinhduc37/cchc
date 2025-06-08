@@ -22,7 +22,7 @@ try:
     # AUTO-INITIALIZE RAG
     print("🚀 Auto-initializing Vector RAG on server startup...")
     
-    from services.unified_processor import initialize_vector_rag
+    from services.unified_processor import initialize_rag_engine
     import asyncio
     import threading
     
@@ -31,7 +31,7 @@ try:
         asyncio.set_event_loop(loop)
         
         try:
-            result = loop.run_until_complete(initialize_vector_rag())
+            result = loop.run_until_complete(initialize_rag_engine())
             if result:
                 print("✅ Vector RAG auto-initialized successfully on startup!")
             else:

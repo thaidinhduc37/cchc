@@ -13,13 +13,14 @@ app.register_blueprint(assistant_routes)
 def health_check():
     return {"status": "OK", "message": "DVC Assistant Server is running."}
 
-# ===== AUTO-INITIALIZE VECTOR RAG ON STARTUP =====
+# ===== SỬA LOGIC: AUTO-INITIALIZE VECTOR RAG ON STARTUP =====
 try:
-    from services.vector_rag.rag_engine import create_rag_engine
+    # SỬA: Import đúng class thay vì function
+    from services.vector_rag.rag_engine import RAGEngine
     VECTOR_RAG_AVAILABLE = True
-    print("✅ Vector RAG loaded successfully")
+    print("✅ Vector RAG class loaded successfully")
     
-    # AUTO-INITIALIZE RAG
+    # SỬA: AUTO-INITIALIZE RAG với class
     print("🚀 Auto-initializing Vector RAG on server startup...")
     
     from services.unified_processor import initialize_rag_engine
@@ -31,6 +32,7 @@ try:
         asyncio.set_event_loop(loop)
         
         try:
+            # SỬA: Sử dụng function có sẵn
             result = loop.run_until_complete(initialize_rag_engine())
             if result:
                 print("✅ Vector RAG auto-initialized successfully on startup!")

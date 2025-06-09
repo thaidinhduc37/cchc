@@ -1,10 +1,11 @@
 # server/services/vector_rag/document_processor.py
 """
-Document processor - SỬA LOGIC: Chunking theo cấu trúc Điều-Khoản-Điểm
+Document processor - SỬA LOGIC: Chunking theo cấu trúc Điều-Khoản-Điểm + Document Linking
 """
 import os
 import re
-from typing import List, Dict, Any
+import json
+from typing import List, Dict, Any, Optional, Set
 from pathlib import Path
 from datetime import datetime
 import logging
@@ -33,7 +34,7 @@ class Document:
         self.metadata = metadata or {}
 
 class DocumentProcessor:
-    """Document processor với legal chunking"""
+    """Document processor với legal chunking + document linking"""
     
     def __init__(self):
         # SỬA LOGIC: Enhanced legal patterns cho chunking
@@ -45,6 +46,24 @@ class DocumentProcessor:
             'legal_doc': r'(Luật|Nghị định|Thông tư)\s+số\s+\d+[^\n]*'
         }
         
+        # THÊM: Document reference patterns để detect links
+        self.doc_reference_patterns = [
+            # "Nghị định 76/2020/NĐ-CP" → "76-2020-NĐ-CP"
+            r'nghị\s*định\s*(?:số\s*)?(\d+)\/(\d{4})\/nđ[-\/]cp',
+            
+            # "Thông tư 32/2020/TT-BCA" → "32-2020-TT-BCA"  
+            r'thông\s*tư\s*(?:số\s*)?(\d+)\/(\d{4})\/tt[-\/](\w+)',
+            
+            # "Luật số 47/2019" → "47-2019-L"
+            r'luật\s*(?:số\s*)?(\d+)\/(\d{4})',
+            
+            # "theo quy định tại điều X"
+            r'theo\s+quy\s+định\s+tại\s+điều\s+(\d+[a-z]?)',
+            
+            # "bổ sung/sửa đổi" patterns
+            r'(?:bổ\s+sung|sửa\s+đổi|thay\s+thế)',
+        ]
+        
         # Supported formats
         self.supported_formats = ['.pdf', '.txt', '.docx']
         
@@ -54,8 +73,288 @@ class DocumentProcessor:
         self.min_chunk_size = 150
         self.max_article_length = 1200  # Max length for single article
         
-        logger.info(f"🔧 DocumentProcessor với legal chunking")
+        # THÊM: Document registry và links
+        self.document_registry = {}  # {doc_id: metadata}
+        self.document_links = {}     # {source_doc: [target_docs]}
+        self.links_file = os.path.join(config.data_path, config.domain, "document_links.json")
+        
+        self._load_document_links()
+        
+        logger.info(f"🔧 DocumentProcessor với legal chunking + document linking")
     
+    def _load_document_links(self):
+        """Load document links từ file"""
+        try:
+            if os.path.exists(self.links_file):
+                with open(self.links_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.document_registry = data.get('registry', {})
+                    self.document_links = data.get('links', {})
+                logger.info(f"📂 Loaded {len(self.document_registry)} docs, {len(self.document_links)} link sets")
+        except Exception as e:
+            logger.warning(f"Load links failed: {e}")
+            self.document_registry = {}
+            self.document_links = {}
+    
+    def _save_document_links(self):
+        """Save document links to file"""
+        try:
+            os.makedirs(os.path.dirname(self.links_file), exist_ok=True)
+            data = {
+                'registry': self.document_registry,
+                'links': self.document_links,
+                'saved_at': datetime.now().isoformat()
+            }
+            with open(self.links_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Save links failed: {e}")
+    
+    def _extract_doc_id_from_filename(self, filename: str) -> Optional[str]:
+        """Extract document ID từ filename"""
+        # Remove extensions
+        base_name = filename.replace('.pdf', '').replace('.txt', '').replace('.docx', '')
+        
+        # Check if follows standard format: "77-2020-NĐ-CP"
+        if re.match(r'\d+-\d{4}-[A-ZĐ-]+', base_name):
+            return base_name
+        
+        # Try to extract from filename patterns
+        patterns = [
+            r'(?:nghị.?định|nd).?(\d+).?(\d{4})',  # "Nghi-dinh-77-2020.pdf"
+            r'(?:thông.?tư|tt).?(\d+).?(\d{4})',    # "Thong-tu-32-2020.pdf"
+            r'(?:luật|luat).?(\d+).?(\d{4})',       # "Luat-47-2019.pdf"
+        ]
+        
+        filename_lower = filename.lower()
+        
+        for pattern in patterns:
+            match = re.search(pattern, filename_lower)
+            if match:
+                number, year = match.groups()
+                
+                if 'nghị' in filename_lower or 'nd' in filename_lower:
+                    return f"{number}-{year}-NĐ-CP"
+                elif 'thông' in filename_lower or 'tt' in filename_lower:
+                    return f"{number}-{year}-TT"
+                elif 'luật' in filename_lower or 'luat' in filename_lower:
+                    return f"{number}-{year}-L"
+        
+        return None
+    
+    def _extract_title_from_content(self, content: str) -> str:
+        """Extract title từ content"""
+        lines = content.split('\n')[:10]  # First 10 lines
+        
+        for line in lines:
+            line = line.strip()
+            if len(line) > 20 and len(line) < 200:
+                # Look for title patterns
+                if any(keyword in line.lower() for keyword in ['nghị định', 'thông tư', 'luật số']):
+                    return line
+        
+        # Fallback
+        return "Văn bản pháp luật"
+    
+    def _extract_document_references(self, content: str) -> List[Dict[str, Any]]:
+        """THÊM: Extract references đến documents khác"""
+        references = []
+        content_lower = content.lower()
+        
+        for pattern in self.doc_reference_patterns:
+            matches = re.finditer(pattern, content_lower, re.IGNORECASE)
+            
+            for match in matches:
+                # Determine reference type and target doc_id
+                ref_info = self._parse_reference_match(match, pattern, content)
+                if ref_info:
+                    references.append(ref_info)
+        
+        return references
+    
+    def _parse_reference_match(self, match, pattern, content: str) -> Optional[Dict[str, Any]]:
+        """Parse reference match thành structured info"""
+        try:
+            # Get surrounding context
+            start = max(0, match.start() - 50)
+            end = min(len(content), match.end() + 50)
+            context = content[start:end].strip()
+            
+            # Determine target doc_id based on pattern
+            groups = match.groups()
+            
+            if 'nghị.*định' in pattern:
+                if len(groups) >= 2:
+                    target_doc_id = f"{groups[0]}-{groups[1]}-NĐ-CP"
+                    return {
+                        'target_doc_id': target_doc_id,
+                        'ref_type': 'implements',
+                        'context': context,
+                        'confidence': 0.9
+                    }
+            
+            elif 'thông.*tư' in pattern:
+                if len(groups) >= 3:
+                    target_doc_id = f"{groups[0]}-{groups[1]}-TT-{groups[2].upper()}"
+                    return {
+                        'target_doc_id': target_doc_id,
+                        'ref_type': 'implements', 
+                        'context': context,
+                        'confidence': 0.9
+                    }
+            
+            elif 'luật' in pattern:
+                if len(groups) >= 2:
+                    target_doc_id = f"{groups[0]}-{groups[1]}-L"
+                    return {
+                        'target_doc_id': target_doc_id,
+                        'ref_type': 'references',
+                        'context': context,
+                        'confidence': 0.8
+                    }
+            
+            elif 'theo.*quy.*định' in pattern:
+                # Article reference - need to find which document
+                article_num = groups[0] if groups else None
+                if article_num:
+                    return {
+                        'target_doc_id': 'unknown',  # Will be resolved later
+                        'ref_type': 'article_reference',
+                        'article_ref': f"Điều {article_num}",
+                        'context': context,
+                        'confidence': 0.7
+                    }
+            
+            elif 'bổ.*sung' in pattern:
+                return {
+                    'target_doc_id': 'unknown',  # Need more context
+                    'ref_type': 'amends',
+                    'context': context,
+                    'confidence': 0.6
+                }
+        
+        except Exception as e:
+            logger.debug(f"Parse reference error: {e}")
+        
+        return None
+    
+    def _register_document(self, doc_id: str, title: str, content: str, file_path: str, doc_type: str):
+        """THÊM: Register document và extract links"""
+        try:
+            # Store document metadata
+            self.document_registry[doc_id] = {
+                'title': title,
+                'doc_type': doc_type,
+                'file_path': file_path,
+                'content_length': len(content),
+                'registered_at': datetime.now().isoformat()
+            }
+            
+            # Extract references
+            references = self._extract_document_references(content)
+            
+            if references:
+                # Store links
+                self.document_links[doc_id] = []
+                
+                for ref in references:
+                    if ref['target_doc_id'] != 'unknown':
+                        self.document_links[doc_id].append({
+                            'target': ref['target_doc_id'],
+                            'type': ref['ref_type'],
+                            'article': ref.get('article_ref'),
+                            'context': ref['context'][:100] + "..." if len(ref['context']) > 100 else ref['context']
+                        })
+                
+                logger.info(f"🔗 Found {len(self.document_links[doc_id])} references in {doc_id}")
+            
+            # Save links
+            self._save_document_links()
+            
+        except Exception as e:
+            logger.warning(f"Document registration failed for {doc_id}: {e}")
+    
+    def get_document_links(self, doc_id: str) -> Dict[str, Any]:
+        """THÊM: Get all links for a document"""
+        result = {
+            'outgoing': [],  # Documents mà doc_id tham chiếu đến
+            'incoming': []   # Documents tham chiếu đến doc_id
+        }
+        
+        # Outgoing links
+        if doc_id in self.document_links:
+            for link in self.document_links[doc_id]:
+                target_id = link['target']
+                link_info = {
+                    'target_doc_id': target_id,
+                    'target_exists': target_id in self.document_registry,
+                    'ref_type': link['type'],
+                    'article_ref': link.get('article'),
+                    'context': link['context']
+                }
+                
+                # Add target document info if exists
+                if target_id in self.document_registry:
+                    target_doc = self.document_registry[target_id]
+                    link_info['target_title'] = target_doc['title']
+                    link_info['target_type'] = target_doc['doc_type']
+                
+                result['outgoing'].append(link_info)
+        
+        # Incoming links (documents that reference this doc)
+        for source_doc, links in self.document_links.items():
+            if source_doc != doc_id:
+                for link in links:
+                    if link['target'] == doc_id:
+                        if source_doc in self.document_registry:
+                            source_info = {
+                                'source_doc_id': source_doc,
+                                'source_title': self.document_registry[source_doc]['title'],
+                                'source_type': self.document_registry[source_doc]['doc_type'],
+                                'ref_type': link['type'],
+                                'article_ref': link.get('article'),
+                                'context': link['context']
+                            }
+                            result['incoming'].append(source_info)
+        
+        return result
+    
+    def get_related_documents(self, doc_id: str, max_depth: int = 2) -> List[str]:
+        """THÊM: Get related documents by following links"""
+        related = set()
+        to_visit = {doc_id}
+        visited = set()
+        
+        for depth in range(max_depth):
+            current_level = to_visit - visited
+            if not current_level:
+                break
+            
+            visited.update(current_level)
+            next_level = set()
+            
+            for current_doc in current_level:
+                if current_doc != doc_id:
+                    related.add(current_doc)
+                
+                # Add outgoing links
+                if current_doc in self.document_links:
+                    for link in self.document_links[current_doc]:
+                        target = link['target']
+                        if target in self.document_registry:
+                            next_level.add(target)
+                
+                # Add incoming links
+                for source_doc, links in self.document_links.items():
+                    for link in links:
+                        if link['target'] == current_doc and source_doc in self.document_registry:
+                            next_level.add(source_doc)
+            
+            to_visit = next_level
+        
+        return list(related)
+    
+    # Các method khác giữ nguyên từ code gốc...
     def load_text_file(self, file_path: str) -> str:
         """Load text file"""
         encodings = ['utf-8', 'utf-8-sig', 'cp1252']
@@ -362,7 +661,7 @@ class DocumentProcessor:
         return info
     
     def process_file(self, file_path: str) -> List[Document]:
-        """Process single file với enhanced metadata"""
+        """Process single file với enhanced metadata + document linking"""
         file_ext = Path(file_path).suffix.lower()
         file_name = Path(file_path).name
         
@@ -389,6 +688,13 @@ class DocumentProcessor:
         doc_metadata = self.detect_document_type(file_path, content)
         legal_info = self.extract_legal_info(content)
         
+        # THÊM: Extract doc_id và register document
+        doc_id = self._extract_doc_id_from_filename(file_name)
+        title = self._extract_title_from_content(content)
+        
+        if doc_id:
+            self._register_document(doc_id, title, content, file_path, doc_metadata['primary_type'])
+        
         # SỬA LOGIC: Chunk with enhanced legal structure
         chunks = self.chunk_content(content, doc_metadata)
         
@@ -399,7 +705,7 @@ class DocumentProcessor:
         # Create documents with enhanced metadata
         documents = []
         for i, chunk in enumerate(chunks):
-            # SỬA LOGIC: Enhanced metadata với legal structure info
+            # SỬA LOGIC: Enhanced metadata với legal structure info + document linking
             metadata = {
                 'source': file_path,
                 'file_name': file_name,
@@ -416,12 +722,21 @@ class DocumentProcessor:
                 # SỬA LOGIC: Thêm legal reference info
                 'legal_reference': self._extract_chunk_legal_reference(chunk),
                 'contains_articles': self._count_articles_in_chunk(chunk),
-                'contains_paragraphs': self._count_paragraphs_in_chunk(chunk)
+                'contains_paragraphs': self._count_paragraphs_in_chunk(chunk),
+                
+                # THÊM: Document linking metadata
+                'doc_id': doc_id,
+                'document_title': title,
+                'has_document_links': doc_id in self.document_links if doc_id else False,
+                'linked_documents_count': len(self.document_links.get(doc_id, [])) if doc_id else 0
             }
             
             documents.append(Document(content=chunk, metadata=metadata))
         
         logger.info(f"✅ Created {len(documents)} chunks from {file_name}")
+        if doc_id and doc_id in self.document_links:
+            logger.info(f"🔗 Document has {len(self.document_links[doc_id])} references")
+        
         return documents
     
     def _extract_chunk_legal_reference(self, chunk: str) -> str:
@@ -463,7 +778,7 @@ class DocumentProcessor:
         return len(re.findall(self.legal_patterns['paragraph'], chunk, re.IGNORECASE))
     
     def process_directory(self, directory_path: str = None) -> List[Document]:
-        """Process directory với enhanced stats"""
+        """Process directory với enhanced stats + document linking"""
         if directory_path is None:
             directory_path = config.documents_path
         
@@ -479,7 +794,9 @@ class DocumentProcessor:
             'failed': 0, 
             'total_chunks': 0,
             'legal_chunks': 0,
-            'articles_found': 0
+            'articles_found': 0,
+            'documents_with_links': 0,
+            'total_references': 0
         }
         
         for file_path in Path(directory_path).rglob("*"):
@@ -497,6 +814,12 @@ class DocumentProcessor:
                         
                         stats['legal_chunks'] += legal_chunks
                         stats['articles_found'] += articles_found
+                        
+                        # Count document links
+                        doc_id = docs[0].metadata.get('doc_id') if docs else None
+                        if doc_id and doc_id in self.document_links:
+                            stats['documents_with_links'] += 1
+                            stats['total_references'] += len(self.document_links[doc_id])
                     else:
                         stats['failed'] += 1
                 except Exception as e:
@@ -508,5 +831,94 @@ class DocumentProcessor:
         logger.info(f"   📝 Total chunks: {stats['total_chunks']}")
         logger.info(f"   ⚖️ Legal chunks: {stats['legal_chunks']}")
         logger.info(f"   📜 Articles found: {stats['articles_found']}")
+        logger.info(f"   🔗 Documents with links: {stats['documents_with_links']}")
+        logger.info(f"   📎 Total references: {stats['total_references']}")
         
         return all_documents
+    
+    def get_linking_stats(self) -> Dict[str, Any]:
+        """THÊM: Get document linking statistics"""
+        total_docs = len(self.document_registry)
+        docs_with_links = len(self.document_links)
+        total_refs = sum(len(links) for links in self.document_links.values())
+        
+        # Count by document type
+        type_stats = {}
+        for doc_id, doc_info in self.document_registry.items():
+            doc_type = doc_info['doc_type']
+            if doc_type not in type_stats:
+                type_stats[doc_type] = {'count': 0, 'with_links': 0}
+            type_stats[doc_type]['count'] += 1
+            if doc_id in self.document_links:
+                type_stats[doc_type]['with_links'] += 1
+        
+        return {
+            'total_documents': total_docs,
+            'documents_with_links': docs_with_links,
+            'total_references': total_refs,
+            'avg_refs_per_doc': total_refs / max(docs_with_links, 1),
+            'link_coverage': docs_with_links / max(total_docs, 1),
+            'type_breakdown': type_stats,
+            'top_referenced': self._get_most_referenced_documents(5)
+        }
+    
+    def _get_most_referenced_documents(self, limit: int = 5) -> List[Dict[str, Any]]:
+        """Get most referenced documents"""
+        # Count incoming references
+        ref_counts = {}
+        for source_doc, links in self.document_links.items():
+            for link in links:
+                target = link['target']
+                if target not in ref_counts:
+                    ref_counts[target] = 0
+                ref_counts[target] += 1
+        
+        # Sort and get top N
+        sorted_refs = sorted(ref_counts.items(), key=lambda x: x[1], reverse=True)
+        
+        result = []
+        for doc_id, count in sorted_refs[:limit]:
+            doc_info = self.document_registry.get(doc_id, {})
+            result.append({
+                'doc_id': doc_id,
+                'title': doc_info.get('title', 'Unknown'),
+                'reference_count': count,
+                'exists': doc_id in self.document_registry
+            })
+        
+        return result
+    
+    def find_related_content_for_context(self, doc_id: str, max_results: int = 3) -> List[Dict[str, Any]]:
+        """THÊM: Find related content for context building"""
+        if doc_id not in self.document_registry:
+            return []
+        
+        related_info = []
+        
+        # Get direct links
+        links = self.get_document_links(doc_id)
+        
+        # Priority: outgoing links (documents this one references)
+        for link in links['outgoing'][:max_results]:
+            if link['target_exists']:
+                related_info.append({
+                    'doc_id': link['target_doc_id'],
+                    'title': link['target_title'],
+                    'relationship': f"references_{link['ref_type']}",
+                    'article_ref': link.get('article_ref'),
+                    'priority': 1
+                })
+        
+        # Add incoming links if we have space
+        remaining = max_results - len(related_info)
+        if remaining > 0:
+            for link in links['incoming'][:remaining]:
+                related_info.append({
+                    'doc_id': link['source_doc_id'],
+                    'title': link['source_title'],
+                    'relationship': f"referenced_by_{link['ref_type']}",
+                    'article_ref': link.get('article_ref'),
+                    'priority': 2
+                })
+        
+        return related_info

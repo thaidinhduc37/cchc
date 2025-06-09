@@ -1,0 +1,48 @@
+{
+  "registry": {
+    "110-2020-TT-BCA": {
+      "title": "Căn cứ Nghị định số 01/2018/NĐ-CP ngày 06 tháng 8 năm 2018 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Bộ Công an;",
+      "doc_type": "nghidinh",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\110-2020-TT-BCA.docx",
+      "content_length": 7320,
+      "registered_at": "2025-06-09T09:55:06.068393"
+    },
+    "59-2024-TT-BCA": {
+      "title": "Sửa đổi, bổ sung một số điều của Thông tư số 74/2020/TT-BCA",
+      "doc_type": "nghidinh",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\59-2024-TT-BCA.docx",
+      "content_length": 9085,
+      "registered_at": "2025-06-09T09:55:06.101800"
+    },
+    "67-2024-NĐ-CP": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "luat",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\67-2024-NĐ-CP.docx",
+      "content_length": 13297,
+      "registered_at": "2025-06-09T09:55:06.134842"
+    },
+    "73-2020-NĐ-CP": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "thongtu",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\73-2020-NĐ-CP.docx",
+      "content_length": 7766,
+      "registered_at": "2025-06-09T09:55:06.162586"
+    },
+    "74-2020-TT-BCA": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "nghidinh",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\74-2020-TT-BCA.docx",
+      "content_length": 8954,
+      "registered_at": "2025-06-09T09:55:06.184805"
+    },
+    "77-2020-NĐ-CP": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "nghidinh",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\77-2020-NĐ-CP.docx",
+      "content_length": 20537,
+      "registered_at": "2025-06-09T09:55:06.233614"
+    }
+  },
+  "links": {},
+  "saved_at": "2025-06-09T09:55:06.233614"
+}

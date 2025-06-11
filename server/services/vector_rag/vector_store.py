@@ -490,3 +490,83 @@ class VectorStore:
                 os.remove(file_path)
         
         logger.info("🗑️ Vector store cleared")
+
+    async def search_comprehensive(self, query: str, k: int = None) -> List[Dict]:
+        """THÊM: Comprehensive search - lấy TẤT CẢ content liên quan"""
+        k = k or config.search_k
+        
+        try:
+            # Step 1: Normal semantic search với threshold thấp
+            primary_results = await self.search(
+                query, 
+                k=k*2,  # Double the normal amount
+                search_type="normal"
+            )
+            
+            # Step 2: Extract key entities từ primary results
+            key_entities = self._extract_entities_from_results(primary_results)
+            
+            # Step 3: Search cho từng entity để tìm related content
+            related_results = []
+            for entity in key_entities[:5]:  # Top 5 entities
+                entity_results = await self.search(
+                    entity,
+                    k=3,
+                    search_type="normal"
+                )
+                related_results.extend(entity_results)
+            
+            # Step 4: Merge và deduplicate
+            all_results = primary_results + related_results
+            unique_results = self._deduplicate_results(all_results)
+            
+            # Step 5: Sort by relevance
+            sorted_results = sorted(unique_results, 
+                                key=lambda x: x.get('final_score', x.get('score', 0)), 
+                                reverse=True)
+            
+            logger.info(f"🔍 Comprehensive search: {len(sorted_results)} total results")
+            return sorted_results[:k*3]  # Return up to 3x normal amount
+            
+        except Exception as e:
+            logger.error(f"❌ Comprehensive search failed: {e}")
+            return await self.search(query, k=k)  # Fallback to normal search
+
+    def _extract_entities_from_results(self, results: List[Dict]) -> List[str]:
+        """Extract key legal entities từ search results"""
+        import re
+        
+        entities = set()
+        
+        for result in results[:3]:  # Top 3 results
+            content = result.get('content', '')
+            
+            # Extract legal references
+            legal_refs = re.findall(r'(Luật số \d+/\d{4}|Nghị định số \d+/\d{4}|Thông tư số \d+/\d{4})', content)
+            entities.update(legal_refs[:2])  # Top 2 legal docs
+            
+            # Extract articles
+            articles = re.findall(r'Điều \d+[a-z]?', content)
+            entities.update(articles[:3])  # Top 3 articles
+            
+            # Extract key terms
+            key_terms = re.findall(r'(hộ chiếu|thị thực|tạm trú|thường trú|xuất cảnh|nhập cảnh)', content.lower())
+            entities.update(key_terms[:2])
+        
+        return list(entities)
+
+    def _deduplicate_results(self, results: List[Dict]) -> List[Dict]:
+        """Remove duplicate results based on content similarity"""
+        unique_results = []
+        seen_content_hashes = set()
+        
+        for result in results:
+            content = result.get('content', '')
+            # Create simple hash from first 200 chars
+            content_hash = hash(content[:200])
+            
+            if content_hash not in seen_content_hashes:
+                seen_content_hashes.add(content_hash)
+                unique_results.append(result)
+        
+        return unique_results

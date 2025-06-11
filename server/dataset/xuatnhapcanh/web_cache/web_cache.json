@@ -12,15 +12,15 @@
         "Căn cứ pháp lý": "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam Số: Luật 47/2014/QH13",
         "Kết quả thực hiện": "Giấy phép xuất nhập cảnh"
       },
-      "extracted_at": "2025-06-09T10:01:03.796824",
+      "extracted_at": "2025-06-10T15:52:41.351178",
       "content_type": "web_procedure",
-      "relevance_score": 0.1534526854219949,
+      "relevance_score": 0.15966386554621848,
       "search_intent": {
         "primary_intent": "general",
         "all_intents": []
       }
     },
-    "timestamp": "2025-06-09T10:01:03.804407",
+    "timestamp": "2025-06-10T15:52:41.358356",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35699"
   },
   "procedure_35700": {
@@ -35,7 +35,7 @@
         "Căn cứ pháp lý": "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam Số: Luật 47/2014/QH13",
         "Kết quả thực hiện": "Gia hạn tạm trú (không quá 06 tháng)"
       },
-      "extracted_at": "2025-06-09T10:01:04.485182",
+      "extracted_at": "2025-06-10T15:52:41.709564",
       "content_type": "web_procedure",
       "relevance_score": 0.1375,
       "search_intent": {
@@ -43,7 +43,7 @@
         "all_intents": []
       }
     },
-    "timestamp": "2025-06-09T10:01:04.488239",
+    "timestamp": "2025-06-10T15:52:41.713087",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35700"
   },
   "procedure_35697": {
@@ -58,9 +58,9 @@
         "Căn cứ pháp lý": "Luật 47/2014/QH13 Số: 47/2014/QH13",
         "Kết quả thực hiện": "Thị thực loại dán hoặc rời"
       },
-      "extracted_at": "2025-06-09T10:13:52.956778",
+      "extracted_at": "2025-06-10T15:54:04.661482",
       "content_type": "web_procedure",
-      "relevance_score": 0.2,
+      "relevance_score": 0.20833333333333331,
       "search_intent": {
         "primary_intent": "documents",
         "all_intents": [
@@ -68,7 +68,7 @@
         ]
       }
     },
-    "timestamp": "2025-06-09T10:13:52.963220",
+    "timestamp": "2025-06-10T15:54:04.669464",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35697"
   },
   "procedure_52392": {
@@ -82,9 +82,9 @@
         "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
         "Căn cứ pháp lý": "Luật 47/2014/QH13 Số: 47/2014/QH13 04/2015/TT-BCA Số: 04/2015/TT-BCA"
       },
-      "extracted_at": "2025-06-09T10:13:53.358196",
+      "extracted_at": "2025-06-10T15:54:05.009207",
       "content_type": "web_procedure",
-      "relevance_score": 0.18681318681318682,
+      "relevance_score": 0.19433198380566802,
       "search_intent": {
         "primary_intent": "documents",
         "all_intents": [
@@ -92,7 +92,7 @@
         ]
       }
     },
-    "timestamp": "2025-06-09T10:13:53.361849",
+    "timestamp": "2025-06-10T15:54:05.012703",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=52392"
   },
   "procedure_54873": {
@@ -107,10 +107,10 @@
         "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
         "Căn cứ pháp lý": "04/2015/TT-BCA Số: 04/2015/TT-BCA"
       },
-      "extracted_at": "2025-06-09T10:13:53.683356",
+      "extracted_at": "2025-06-10T15:54:05.498262",
       "content_type": "web_procedure"
     },
-    "timestamp": "2025-06-09T10:13:53.685933",
+    "timestamp": "2025-06-10T15:54:05.501286",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=54873"
   }
 }

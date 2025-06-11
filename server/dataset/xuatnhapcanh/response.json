@@ -3,7 +3,7 @@
     "question": "Thành phần hồ sơ yêu cầu cấp hộ chiếu phổ thông là gì?",
     "keywords": ["thành phần hồ sơ hộ chiếu", "giấy tờ cấp hộ chiếu", "hồ sơ làm hộ chiếu"],
     "answer": "1. Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01, khai online hoặc trên giấy)\n2. 01 ảnh 4x6cm, nền trắng, chụp không quá 6 tháng\n3. Chứng minh nhân dân/Căn cước công dân bản gốc để đối chiếu\n4. Hộ chiếu cũ (nếu có, đối với trường hợp cấp lại)\n5. Giấy tờ chứng minh đối tượng ưu tiên (nếu thuộc diện ưu tiên)\n6. Trẻ em dưới 14 tuổi cần bổ sung giấy khai sinh và giấy tờ của người đại diện hợp pháp\n7. Nếu làm tại nơi tạm trú, cần có giấy xác nhận hoặc sổ tạm trú hợp pháp",
-    "law_ref": "Điều 15, Luật 49/2019/QH14; Thông tư 31/2023/TT-BCA",
+    "law_ref": "Điều 15, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam; Thông tư 31/2023/TT-BCA",
     "intent": "thủ tục"
   },
   {
@@ -17,7 +17,7 @@
     "question": "Làm hộ chiếu ở đâu?",
     "keywords": ["nộp hồ sơ hộ chiếu ở đâu", "làm hộ chiếu ở đâu"],
     "answer": "Bạn nộp hồ sơ tại Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố nơi thường trú hoặc tạm trú. Có thể nộp trực tiếp hoặc trực tuyến qua Cổng DVC Bộ Công an.",
-    "law_ref": "Điều 15, Luật 49/2019/QH14",
+    "law_ref": "Điều 15, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "thủ tục"
   },
   {
@@ -31,35 +31,35 @@
     "question": "Có thể làm hộ chiếu trực tuyến không?",
     "keywords": ["làm hộ chiếu online", "đăng ký hộ chiếu trực tuyến"],
     "answer": "Bạn có thể đăng ký cấp hộ chiếu phổ thông trực tuyến qua Cổng DVC Bộ Công an tại https://dichvucong.bocongan.gov.vn.",
-    "law_ref": "Điều 16, Luật 49/2019/QH14",
+    "law_ref": "Điều 16, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "thủ tục"
   },
   {
     "question": "Thời gian cấp hộ chiếu là bao lâu?",
     "keywords": ["thời gian cấp hộ chiếu", "bao lâu có hộ chiếu"],
     "answer": "Không quá 08 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ.",
-    "law_ref": "Điều 17, Luật 49/2019/QH14",
+    "law_ref": "Điều 17, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "thủ tục"
   },
   {
     "question": "Làm hộ chiếu cho trẻ em dưới 14 tuổi cần giấy tờ gì?",
     "keywords": ["hồ sơ hộ chiếu trẻ em", "làm hộ chiếu cho trẻ dưới 14 tuổi"],
     "answer": "Cần tờ khai do cha/mẹ hoặc người đại diện hợp pháp khai và ký, 01 ảnh 4x6cm của trẻ, bản sao giấy khai sinh, giấy tờ chứng minh quan hệ đại diện hợp pháp.",
-    "law_ref": "Điều 15, Luật 49/2019/QH14; Thông tư 31/2023/TT-BCA",
+    "law_ref": "Điều 15, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam; Thông tư 31/2023/TT-BCA",
     "intent": "thủ tục"
   },
   {
     "question": "Có thể nhận hộ chiếu qua bưu điện không?",
     "keywords": ["nhận hộ chiếu qua bưu điện", "chuyển phát hộ chiếu"],
     "answer": "Bạn có thể đăng ký nhận hộ chiếu qua dịch vụ bưu chính khi nộp hồ sơ và thanh toán thêm phí chuyển phát.",
-    "law_ref": "Điều 17, Luật 49/2019/QH14",
+    "law_ref": "Điều 17, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "thủ tục"
   },
   {
     "question": "Tôi bị mất hộ chiếu, muốn cấp lại cần giấy tờ gì?",
     "keywords": ["cấp lại hộ chiếu bị mất", "hồ sơ cấp lại hộ chiếu"],
     "answer": "- Đơn trình báo mất hộ chiếu\n- Tờ khai đề nghị cấp hộ chiếu mới\n- 01 ảnh 4x6cm nền trắng\n- CMND/CCCD còn giá trị sử dụng",
-    "law_ref": "Điều 15, Luật 49/2019/QH14; Thông tư 31/2023/TT-BCA",
+    "law_ref": "Điều 15, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam; Thông tư 31/2023/TT-BCA",
     "intent": "thủ tục"
   },
   {
@@ -74,70 +74,70 @@
     "question": "Xuất cảnh là gì?",
     "keywords": ["xuất cảnh là gì", "định nghĩa xuất cảnh"],
     "answer": "Xuất cảnh là việc công dân Việt Nam ra khỏi lãnh thổ Việt Nam qua cửa khẩu của Việt Nam.",
-    "law_ref": "Khoản 5, Điều 2, Luật 49/2019/QH14",
+    "law_ref": "Khoản 5, Điều 2, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Nhập cảnh là gì?",
     "keywords": ["nhập cảnh là gì", "định nghĩa nhập cảnh"],
     "answer": "Nhập cảnh là việc công dân Việt Nam vào lãnh thổ Việt Nam qua cửa khẩu của Việt Nam.",
-    "law_ref": "Khoản 6, Điều 2, Luật 49/2019/QH14",
+    "law_ref": "Khoản 6, Điều 2, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Điều kiện để công dân được xuất cảnh?",
     "keywords": ["điều kiện xuất cảnh", "được xuất cảnh khi nào"],
     "answer": "Công dân Việt Nam được xuất cảnh khi có giấy tờ xuất nhập cảnh còn giá trị sử dụng và không thuộc trường hợp bị tạm hoãn xuất cảnh.",
-    "law_ref": "Điều 33, Luật 49/2019/QH14",
+    "law_ref": "Điều 33, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Các trường hợp nào bị tạm hoãn xuất cảnh?",
     "keywords": ["tạm hoãn xuất cảnh", "ai bị cấm xuất cảnh"],
     "answer": "Công dân bị tạm hoãn xuất cảnh nếu thuộc các trường hợp quy định tại Điều 36 như: đang bị truy cứu trách nhiệm hình sự, liên quan nợ thuế lớn, vi phạm hành chính, vì lý do quốc phòng an ninh...",
-    "law_ref": "Điều 36, Luật 49/2019/QH14",
+    "law_ref": "Điều 36, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Giấy tờ xuất nhập cảnh là gì?",
     "keywords": ["giấy tờ xuất nhập cảnh", "định nghĩa giấy tờ xuất nhập cảnh"],
     "answer": "Giấy tờ xuất nhập cảnh là hộ chiếu, giấy thông hành và các loại giấy tờ khác có giá trị xuất cảnh, nhập cảnh do cơ quan có thẩm quyền cấp.",
-    "law_ref": "Khoản 1, Điều 3, Luật 49/2019/QH14",
+    "law_ref": "Khoản 1, Điều 3, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Hộ chiếu phổ thông có thời hạn bao lâu?",
     "keywords": ["thời hạn hộ chiếu phổ thông", "hộ chiếu phổ thông giá trị mấy năm"],
     "answer": "Hộ chiếu phổ thông cấp cho người từ đủ 14 tuổi trở lên có thời hạn 10 năm; cho người dưới 14 tuổi có thời hạn 5 năm và không được gia hạn.",
-    "law_ref": "Điều 7, Luật 49/2019/QH14",
+    "law_ref": "Điều 7, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Trách nhiệm của công dân khi xuất cảnh là gì?",
     "keywords": ["trách nhiệm khi xuất cảnh", "nghĩa vụ khi xuất cảnh"],
     "answer": "Công dân phải xuất trình giấy tờ hợp lệ, tuân thủ quy định về kiểm soát xuất nhập cảnh, chấp hành quyết định của cơ quan chức năng.",
-    "law_ref": "Điều 5, Luật 49/2019/QH14",
+    "law_ref": "Điều 5, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Công dân có quyền gì khi xuất cảnh?",
     "keywords": ["quyền công dân khi xuất cảnh", "quyền xuất cảnh"],
     "answer": "Công dân có quyền xuất cảnh, nhập cảnh trừ trường hợp bị cấm hoặc tạm hoãn theo quy định pháp luật.",
-    "law_ref": "Điều 4, Luật 49/2019/QH14",
+    "law_ref": "Điều 4, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Khi nào công dân bị thu hồi hộ chiếu?",
     "keywords": ["bị thu hồi hộ chiếu", "trường hợp thu hồi hộ chiếu"],
     "answer": "Hộ chiếu bị thu hồi nếu được cấp không đúng thẩm quyền, giả mạo hồ sơ hoặc sử dụng cho mục đích vi phạm pháp luật.",
-    "law_ref": "Điều 28, Luật 49/2019/QH14",
+    "law_ref": "Điều 28, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   },
   {
     "question": "Ai có thẩm quyền cấp hộ chiếu?",
     "keywords": ["thẩm quyền cấp hộ chiếu", "cơ quan nào cấp hộ chiếu"],
     "answer": "Cơ quan Quản lý xuất nhập cảnh Bộ Công an và Công an cấp tỉnh có thẩm quyền cấp hộ chiếu cho công dân Việt Nam trong nước.",
-    "law_ref": "Điều 15, Luật 49/2019/QH14",
+    "law_ref": "Điều 15, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
     "intent": "luật"
   }
 ]

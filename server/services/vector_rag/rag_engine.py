@@ -143,32 +143,35 @@ class RAGEngine:
             }
     
     def _update_chat_history(self, question: str):
-        """CẬP NHẬT: Update chat history cho context"""
-        self.chat_history.append(question)
+            """CẬP NHẬT: Update chat history cho context"""
+            self.chat_history.append(question)
+            
+            # Keep only last N messages
+            if len(self.chat_history) > self.max_history:
+                self.chat_history = self.chat_history[-self.max_history:]
         
-        # Keep only last N messages
-        if len(self.chat_history) > self.max_history:
-            self.chat_history = self.chat_history[-self.max_history:]
-    
     async def _search_enhanced(self, features: Any) -> List[Dict]:
-        """CẬP NHẬT: Enhanced search với entity reranking"""
+        """SỬA LOGIC: Enhanced search với nhiều results hơn"""
         strategy = features.search_strategy
         all_results = []
         
         try:
             if strategy == 'vector_priority':
-                vector_results = await self._vector_search_enhanced(features, k=7)
+                # SỬA: Tăng mạnh để extract đủ legal content  
+                vector_results = await self._vector_search_enhanced(features, k=15)  # TỪ 7 → 15
                 web_results = await self._web_search(features.normalized_query, features, k=2)
                 all_results = vector_results + web_results
                 
             elif strategy == 'web_priority':
                 web_results = await self._web_search(features.normalized_query, features, k=5)
-                vector_results = await self._vector_search_enhanced(features, k=3)
+                # SỬA: Tăng vector backup
+                vector_results = await self._vector_search_enhanced(features, k=5)  # TỪ 3 → 5
                 all_results = web_results + vector_results
                 
             else:  # hybrid
-                vector_task = self._vector_search_enhanced(features, k=5)
-                web_task = self._web_search(features.normalized_query, features, k=3)
+                # SỬA: Tăng cả hai cho hybrid
+                vector_task = self._vector_search_enhanced(features, k=8)    # TỪ 5 → 8
+                web_task = self._web_search(features.normalized_query, features, k=4)  # TỪ 3 → 4
                 
                 vector_results, web_results = await asyncio.gather(
                     vector_task, web_task, return_exceptions=True
@@ -178,31 +181,37 @@ class RAGEngine:
                     all_results.extend(vector_results)
                 if isinstance(web_results, list):
                     all_results.extend(web_results)
-            
+        
         except Exception as e:
             logger.error(f"Search error: {e}")
         
         return all_results
     
     async def _vector_search_enhanced(self, features: Any, k: int = 5) -> List[Dict]:
-        """CẬP NHẬT: Vector search với entity reranking"""
+        """SỬA LOGIC: Vector search với comprehensive extraction"""
         try:
-            # Use optimized query for vector search
             optimized_query = self.query_classifier.format_query_for_vector(
                 features.normalized_query, features
             )
             
-            search_type = "exact_legal" if features.has_specific_article else "normal"
+            # SỬA: Sử dụng comprehensive search cho legal queries
+            if features.primary_intent == 'LEGAL' or features.has_specific_article:
+                # Use comprehensive search để extract tất cả content liên quan
+                results = await self.vector_store.search_comprehensive(
+                    optimized_query, 
+                    k=k
+                )
+                logger.info(f"✅ Comprehensive search: {len(results)} results")
+            else:
+                # Normal search cho non-legal queries
+                results = await self.vector_store.search(
+                    optimized_query, 
+                    k=k*2, 
+                    search_type="normal",
+                    query_entities=features.extracted_entities
+                )
+                logger.info(f"✅ Normal search: {len(results)} results")
             
-            # CẬP NHẬT: Pass entities for reranking
-            results = await self.vector_store.search(
-                optimized_query, 
-                k=k, 
-                search_type=search_type,
-                query_entities=features.extracted_entities
-            )
-            
-            logger.info(f"✅ Vector: {len(results)} results (with entity reranking)")
             return results
             
         except Exception as e:

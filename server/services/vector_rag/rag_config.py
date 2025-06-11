@@ -48,13 +48,13 @@ class RAGConfig:
     embedding_model: str = VIETNAMESE_EMBEDDING_MODELS['e5_base']  # ✅ FIXED: Use e5-base
     
     # CẬP NHẬT: Enhanced chunking for legal documents
-    chunk_size: int = 800        
-    chunk_overlap: int = 100     
-    search_k: int = 8           
+    chunk_size: int = 1200        
+    chunk_overlap: int = 200     
+    search_k: int = 12           
     
     # CẬP NHẬT: Adjusted thresholds for e5-base
-    min_similarity_threshold: float = 0.15  
-    vector_search_threshold: float = 0.1    
+    min_similarity_threshold: float = 0.05  
+    vector_search_threshold: float = 0.02    
     
     # LLM Settings
     gemini_api_key: Optional[str] = None

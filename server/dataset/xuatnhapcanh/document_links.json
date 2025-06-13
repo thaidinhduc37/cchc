@@ -5,58 +5,44 @@
       "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\110-2020-TT-BCA.docx",
       "content_length": 7320,
-      "registered_at": "2025-06-13T09:52:56.786413"
+      "registered_at": "2025-06-13T16:08:36.785056"
+    },
+    "31-2023-TT-BCA": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "luat_cong_dan_vn",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\31-2023-TT-BCA.docx",
+      "content_length": 8689,
+      "registered_at": "2025-06-13T16:08:36.820848"
     },
     "59-2024-TT-BCA": {
       "title": "Sửa đổi, bổ sung một số điều của Thông tư số 74/2020/TT-BCA",
       "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\59-2024-TT-BCA.docx",
       "content_length": 9085,
-      "registered_at": "2025-06-13T09:52:56.834928"
+      "registered_at": "2025-06-13T16:08:36.864667"
     },
     "67-2024-NĐ-CP": {
       "title": "Văn bản pháp luật",
       "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\67-2024-NĐ-CP.docx",
       "content_length": 13297,
-      "registered_at": "2025-06-13T09:52:56.881819"
-    },
-    "71-2015-NĐ-CP": {
-      "title": "Văn bản pháp luật",
-      "doc_type": "luat_nguoi_nuoc_ngoai",
-      "file_path": "dataset\\xuatnhapcanh\\documents\\71-2015-NĐ-CP.docx",
-      "content_length": 81923,
-      "registered_at": "2025-06-13T09:52:57.095301"
-    },
-    "73-2020-NĐ-CP": {
-      "title": "Văn bản pháp luật",
-      "doc_type": "luat_cong_dan_vn",
-      "file_path": "dataset\\xuatnhapcanh\\documents\\73-2020-NĐ-CP.docx",
-      "content_length": 7766,
-      "registered_at": "2025-06-13T09:52:57.264076"
+      "registered_at": "2025-06-13T16:08:36.897977"
     },
     "74-2020-TT-BCA": {
       "title": "Văn bản pháp luật",
       "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\74-2020-TT-BCA.docx",
       "content_length": 8954,
-      "registered_at": "2025-06-13T09:52:57.306347"
+      "registered_at": "2025-06-13T16:08:36.928031"
     },
     "77-2020-NĐ-CP": {
       "title": "Văn bản pháp luật",
       "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\77-2020-NĐ-CP.docx",
       "content_length": 20537,
-      "registered_at": "2025-06-13T09:52:57.514375"
-    },
-    "79-2020-TT-BCA": {
-      "title": "Văn bản pháp luật",
-      "doc_type": "luat_cong_dan_vn",
-      "file_path": "dataset\\xuatnhapcanh\\documents\\79-2020-TT-BCA.docx",
-      "content_length": 18567,
-      "registered_at": "2025-06-13T09:52:57.552336"
+      "registered_at": "2025-06-13T16:08:36.979084"
     }
   },
   "links": {},
-  "saved_at": "2025-06-13T09:52:57.554381"
+  "saved_at": "2025-06-13T16:08:36.981084"
 }

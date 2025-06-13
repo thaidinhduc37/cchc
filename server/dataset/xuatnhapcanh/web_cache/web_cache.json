@@ -12,7 +12,7 @@
         "Căn cứ pháp lý": "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam Số: Luật 47/2014/QH13",
         "Kết quả thực hiện": "Giấy phép xuất nhập cảnh"
       },
-      "extracted_at": "2025-06-13T09:55:33.182966",
+      "extracted_at": "2025-06-13T16:10:06.542642",
       "content_type": "web_procedure",
       "relevance_score": 0.15966386554621848,
       "search_intent": {
@@ -20,7 +20,7 @@
         "all_intents": []
       }
     },
-    "timestamp": "2025-06-13T09:55:33.189744",
+    "timestamp": "2025-06-13T16:10:06.549226",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35699"
   },
   "procedure_35700": {
@@ -35,10 +35,78 @@
         "Căn cứ pháp lý": "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam Số: Luật 47/2014/QH13",
         "Kết quả thực hiện": "Gia hạn tạm trú (không quá 06 tháng)"
       },
-      "extracted_at": "2025-06-13T09:59:38.685018",
+      "extracted_at": "2025-06-13T16:10:06.841896",
+      "content_type": "web_procedure",
+      "relevance_score": 0.1375,
+      "search_intent": {
+        "primary_intent": "general",
+        "all_intents": []
+      }
+    },
+    "timestamp": "2025-06-13T16:10:06.846401",
+    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35700"
+  },
+  "procedure_35697": {
+    "data": {
+      "code": "35697",
+      "title": "Cổng Dịch vụ công Bộ Công an",
+      "sections": {
+        "Yêu cầu - điều kiện": "Đăng ký, quản lý con dấu",
+        "Trình tự thực hiện": "Bước 1: Chuẩn bị hồ sơ theo quy định của pháp luật.",
+        "Thời hạn giải quyết": "5 Ngày làm việc",
+        "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
+        "Căn cứ pháp lý": "Luật 47/2014/QH13 Số: 47/2014/QH13",
+        "Kết quả thực hiện": "Thị thực loại dán hoặc rời"
+      },
+      "extracted_at": "2025-06-13T16:35:31.536196",
+      "content_type": "web_procedure",
+      "relevance_score": 0.15,
+      "search_intent": {
+        "primary_intent": "general",
+        "all_intents": []
+      }
+    },
+    "timestamp": "2025-06-13T16:35:31.542934",
+    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35697"
+  },
+  "procedure_52392": {
+    "data": {
+      "code": "52392",
+      "title": "Cổng Dịch vụ công Bộ Công an",
+      "sections": {
+        "Yêu cầu - điều kiện": "Đăng ký, quản lý con dấu",
+        "Trình tự thực hiện": "Bước 1: Chuẩn bị hồ sơ theo quy định của pháp luật.",
+        "Thời hạn giải quyết": "5 Ngày làm việc",
+        "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
+        "Căn cứ pháp lý": "Luật 47/2014/QH13 Số: 47/2014/QH13 04/2015/TT-BCA Số: 04/2015/TT-BCA"
+      },
+      "extracted_at": "2025-06-13T16:35:31.823319",
+      "content_type": "web_procedure",
+      "relevance_score": 0.13942307692307693,
+      "search_intent": {
+        "primary_intent": "general",
+        "all_intents": []
+      }
+    },
+    "timestamp": "2025-06-13T16:35:31.826498",
+    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=52392"
+  },
+  "procedure_54873": {
+    "data": {
+      "code": "54873",
+      "title": "Cổng Dịch vụ công Bộ Công an",
+      "sections": {
+        "Yêu cầu - điều kiện": "Đăng ký, quản lý con dấu",
+        "Trình tự thực hiện": "Bước 1: Chuẩn bị hồ sơ theo quy định của pháp luật.",
+        "Thời hạn giải quyết": "05 ngày làm việc",
+        "Lệ Phí": "theo quy định. Cán bộ trả kết quả kiểm tra và yêu cầu ký nhận, trả thẻ thường trú cho người đến nhận kết quả.",
+        "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
+        "Căn cứ pháp lý": "04/2015/TT-BCA Số: 04/2015/TT-BCA"
+      },
+      "extracted_at": "2025-06-13T16:35:32.264281",
       "content_type": "web_procedure"
     },
-    "timestamp": "2025-06-13T09:59:38.691733",
-    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35700"
+    "timestamp": "2025-06-13T16:35:32.267974",
+    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=54873"
   }
 }

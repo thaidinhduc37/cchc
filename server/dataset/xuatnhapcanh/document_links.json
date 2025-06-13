@@ -2,47 +2,61 @@
   "registry": {
     "110-2020-TT-BCA": {
       "title": "Căn cứ Nghị định số 01/2018/NĐ-CP ngày 06 tháng 8 năm 2018 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Bộ Công an;",
-      "doc_type": "nghidinh",
+      "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\110-2020-TT-BCA.docx",
       "content_length": 7320,
-      "registered_at": "2025-06-09T09:55:06.068393"
+      "registered_at": "2025-06-13T09:52:56.786413"
     },
     "59-2024-TT-BCA": {
       "title": "Sửa đổi, bổ sung một số điều của Thông tư số 74/2020/TT-BCA",
-      "doc_type": "nghidinh",
+      "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\59-2024-TT-BCA.docx",
       "content_length": 9085,
-      "registered_at": "2025-06-09T09:55:06.101800"
+      "registered_at": "2025-06-13T09:52:56.834928"
     },
     "67-2024-NĐ-CP": {
       "title": "Văn bản pháp luật",
-      "doc_type": "luat",
+      "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\67-2024-NĐ-CP.docx",
       "content_length": 13297,
-      "registered_at": "2025-06-09T09:55:06.134842"
+      "registered_at": "2025-06-13T09:52:56.881819"
+    },
+    "71-2015-NĐ-CP": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "luat_nguoi_nuoc_ngoai",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\71-2015-NĐ-CP.docx",
+      "content_length": 81923,
+      "registered_at": "2025-06-13T09:52:57.095301"
     },
     "73-2020-NĐ-CP": {
       "title": "Văn bản pháp luật",
-      "doc_type": "thongtu",
+      "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\73-2020-NĐ-CP.docx",
       "content_length": 7766,
-      "registered_at": "2025-06-09T09:55:06.162586"
+      "registered_at": "2025-06-13T09:52:57.264076"
     },
     "74-2020-TT-BCA": {
       "title": "Văn bản pháp luật",
-      "doc_type": "nghidinh",
+      "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\74-2020-TT-BCA.docx",
       "content_length": 8954,
-      "registered_at": "2025-06-09T09:55:06.184805"
+      "registered_at": "2025-06-13T09:52:57.306347"
     },
     "77-2020-NĐ-CP": {
       "title": "Văn bản pháp luật",
-      "doc_type": "nghidinh",
+      "doc_type": "luat_cong_dan_vn",
       "file_path": "dataset\\xuatnhapcanh\\documents\\77-2020-NĐ-CP.docx",
       "content_length": 20537,
-      "registered_at": "2025-06-09T09:55:06.233614"
+      "registered_at": "2025-06-13T09:52:57.514375"
+    },
+    "79-2020-TT-BCA": {
+      "title": "Văn bản pháp luật",
+      "doc_type": "luat_cong_dan_vn",
+      "file_path": "dataset\\xuatnhapcanh\\documents\\79-2020-TT-BCA.docx",
+      "content_length": 18567,
+      "registered_at": "2025-06-13T09:52:57.552336"
     }
   },
   "links": {},
-  "saved_at": "2025-06-09T09:55:06.233614"
+  "saved_at": "2025-06-13T09:52:57.554381"
 }

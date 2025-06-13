@@ -12,7 +12,7 @@
         "Căn cứ pháp lý": "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam Số: Luật 47/2014/QH13",
         "Kết quả thực hiện": "Giấy phép xuất nhập cảnh"
       },
-      "extracted_at": "2025-06-10T15:52:41.351178",
+      "extracted_at": "2025-06-13T09:55:33.182966",
       "content_type": "web_procedure",
       "relevance_score": 0.15966386554621848,
       "search_intent": {
@@ -20,7 +20,7 @@
         "all_intents": []
       }
     },
-    "timestamp": "2025-06-10T15:52:41.358356",
+    "timestamp": "2025-06-13T09:55:33.189744",
     "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35699"
   },
   "procedure_35700": {
@@ -35,82 +35,10 @@
         "Căn cứ pháp lý": "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam Số: Luật 47/2014/QH13",
         "Kết quả thực hiện": "Gia hạn tạm trú (không quá 06 tháng)"
       },
-      "extracted_at": "2025-06-10T15:52:41.709564",
-      "content_type": "web_procedure",
-      "relevance_score": 0.1375,
-      "search_intent": {
-        "primary_intent": "general",
-        "all_intents": []
-      }
-    },
-    "timestamp": "2025-06-10T15:52:41.713087",
-    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35700"
-  },
-  "procedure_35697": {
-    "data": {
-      "code": "35697",
-      "title": "Cổng Dịch vụ công Bộ Công an",
-      "sections": {
-        "Yêu cầu - điều kiện": "Đăng ký, quản lý con dấu",
-        "Trình tự thực hiện": "Bước 1: Chuẩn bị hồ sơ theo quy định của pháp luật.",
-        "Thời hạn giải quyết": "5 Ngày làm việc",
-        "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
-        "Căn cứ pháp lý": "Luật 47/2014/QH13 Số: 47/2014/QH13",
-        "Kết quả thực hiện": "Thị thực loại dán hoặc rời"
-      },
-      "extracted_at": "2025-06-10T15:54:04.661482",
-      "content_type": "web_procedure",
-      "relevance_score": 0.20833333333333331,
-      "search_intent": {
-        "primary_intent": "documents",
-        "all_intents": [
-          "documents"
-        ]
-      }
-    },
-    "timestamp": "2025-06-10T15:54:04.669464",
-    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35697"
-  },
-  "procedure_52392": {
-    "data": {
-      "code": "52392",
-      "title": "Cổng Dịch vụ công Bộ Công an",
-      "sections": {
-        "Yêu cầu - điều kiện": "Đăng ký, quản lý con dấu",
-        "Trình tự thực hiện": "Bước 1: Chuẩn bị hồ sơ theo quy định của pháp luật.",
-        "Thời hạn giải quyết": "5 Ngày làm việc",
-        "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
-        "Căn cứ pháp lý": "Luật 47/2014/QH13 Số: 47/2014/QH13 04/2015/TT-BCA Số: 04/2015/TT-BCA"
-      },
-      "extracted_at": "2025-06-10T15:54:05.009207",
-      "content_type": "web_procedure",
-      "relevance_score": 0.19433198380566802,
-      "search_intent": {
-        "primary_intent": "documents",
-        "all_intents": [
-          "documents"
-        ]
-      }
-    },
-    "timestamp": "2025-06-10T15:54:05.012703",
-    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=52392"
-  },
-  "procedure_54873": {
-    "data": {
-      "code": "54873",
-      "title": "Cổng Dịch vụ công Bộ Công an",
-      "sections": {
-        "Yêu cầu - điều kiện": "Đăng ký, quản lý con dấu",
-        "Trình tự thực hiện": "Bước 1: Chuẩn bị hồ sơ theo quy định của pháp luật.",
-        "Thời hạn giải quyết": "05 ngày làm việc",
-        "Lệ Phí": "theo quy định. Cán bộ trả kết quả kiểm tra và yêu cầu ký nhận, trả thẻ thường trú cho người đến nhận kết quả.",
-        "Cơ quan thực hiện": "Chọn cơ quan thực hiện ---",
-        "Căn cứ pháp lý": "04/2015/TT-BCA Số: 04/2015/TT-BCA"
-      },
-      "extracted_at": "2025-06-10T15:54:05.498262",
+      "extracted_at": "2025-06-13T09:59:38.685018",
       "content_type": "web_procedure"
     },
-    "timestamp": "2025-06-10T15:54:05.501286",
-    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=54873"
+    "timestamp": "2025-06-13T09:59:38.691733",
+    "url": "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/tthc?matt=35700"
   }
 }

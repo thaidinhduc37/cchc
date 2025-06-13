@@ -1,6 +1,6 @@
 # server/services/vector_rag/document_processor.py
 """
-Document processor - SỬA LOGIC: Chunking theo cấu trúc Điều-Khoản-Điểm + Document Linking
+Document processor - SỬA: Nâng cấp logic phân biệt và chunking văn bản pháp luật
 """
 import os
 import re
@@ -34,10 +34,10 @@ class Document:
         self.metadata = metadata or {}
 
 class DocumentProcessor:
-    """Document processor với legal chunking + document linking"""
+    """SỬA: Enhanced document processor với better legal document classification"""
     
     def __init__(self):
-        # SỬA LOGIC: Enhanced legal patterns cho chunking
+        # SỬA: Enhanced legal patterns cho accurate chunking
         self.legal_patterns = {
             'chapter': r'(?:^|\n)\s*Chương\s+([IVX\d]+)\s*[.:]?\s*([^\n]*)',
             'article': r'(?:^|\n)\s*Điều\s+(\d+[a-z]?)\s*[.:]?\s*([^\n]*)',
@@ -46,41 +46,92 @@ class DocumentProcessor:
             'legal_doc': r'(Luật|Nghị định|Thông tư)\s+số\s+\d+[^\n]*'
         }
         
-        # THÊM: Document reference patterns để detect links
+        # SỬA: Enhanced document reference patterns
         self.doc_reference_patterns = [
-            # "Nghị định 76/2020/NĐ-CP" → "76-2020-NĐ-CP"
+            # More comprehensive patterns
             r'nghị\s*định\s*(?:số\s*)?(\d+)\/(\d{4})\/nđ[-\/]cp',
-            
-            # "Thông tư 32/2020/TT-BCA" → "32-2020-TT-BCA"  
             r'thông\s*tư\s*(?:số\s*)?(\d+)\/(\d{4})\/tt[-\/](\w+)',
-            
-            # "Luật số 47/2019" → "47-2019-L"
-            r'luật\s*(?:số\s*)?(\d+)\/(\d{4})',
-            
-            # "theo quy định tại điều X"
+            r'luật\s*(?:số\s*)?(\d+)\/(\d{4})(?:\/qh\d+)?',
+            r'quyết\s*định\s*(?:số\s*)?(\d+)\/(\d{4})\/qđ[-\/](\w+)',
             r'theo\s+quy\s+định\s+tại\s+điều\s+(\d+[a-z]?)',
-            
-            # "bổ sung/sửa đổi" patterns
             r'(?:bổ\s+sung|sửa\s+đổi|thay\s+thế)',
         ]
+        
+        # SỬA: Enhanced legal document classification
+        self.legal_document_types = {
+            'luat_cong_dan_vn': {
+                'file_patterns': [
+                    r'.*49.*2019.*công.*dân.*việt.*nam.*',
+                    r'.*xuất.*cảnh.*nhập.*cảnh.*công.*dân.*',
+                    r'.*luat.*xuat.*canh.*nhap.*canh.*cong.*dan.*'
+                ],
+                'content_patterns': [
+                    r'luật\s+xuất\s+cảnh,?\s*nhập\s+cảnh\s+của\s+công\s+dân\s+việt\s+nam',
+                    r'số\s+49/2019/qh14',
+                    r'công\s+dân\s+việt\s+nam.*xuất\s+cảnh'
+                ],
+                'domain': 'xuất nhập cảnh công dân việt nam',
+                'priority': 10
+            },
+            'luat_nguoi_nuoc_ngoai': {
+                'file_patterns': [
+                    r'.*47.*2014.*người.*nước.*ngoài.*',
+                    r'.*nhập.*cảnh.*xuất.*cảnh.*người.*nước.*ngoài.*',
+                    r'.*luat.*nhap.*canh.*xuat.*canh.*nguoi.*nuoc.*ngoai.*'
+                ],
+                'content_patterns': [
+                    r'luật\s+nhập\s+cảnh,?\s*xuất\s+cảnh.*người\s+nước\s+ngoài',
+                    r'số\s+47/2014/qh13',
+                    r'người\s+nước\s+ngoài.*nhập\s+cảnh'
+                ],
+                'domain': 'xuất nhập cảnh người nước ngoài',
+                'priority': 9
+            },
+            'bo_luat_to_tung': {
+                'file_patterns': [
+                    r'.*bộ.*luật.*tố.*tụng.*hình.*sự.*',
+                    r'.*101.*2015.*tố.*tụng.*',
+                    r'.*blttps.*'
+                ],
+                'content_patterns': [
+                    r'bộ\s+luật\s+tố\s+tụng\s+hình\s+sự',
+                    r'số\s+101/2015/qh13',
+                    r'bị\s+can.*bị\s+cáo'
+                ],
+                'domain': 'tố tụng hình sự',
+                'priority': 6
+            },
+            'luat_hanh_chinh': {
+                'file_patterns': [
+                    r'.*vi.*phạm.*hành.*chính.*',
+                    r'.*xử.*phạt.*hành.*chính.*'
+                ],
+                'content_patterns': [
+                    r'vi\s+phạm\s+hành\s+chính',
+                    r'xử\s+phạt\s+hành\s+chính'
+                ],
+                'domain': 'vi phạm hành chính',
+                'priority': 4
+            }
+        }
         
         # Supported formats
         self.supported_formats = ['.pdf', '.txt', '.docx']
         
-        # SỬA LOGIC: Chunking settings for legal structure
+        # Chunking settings
         self.chunk_size = config.chunk_size
         self.chunk_overlap = config.chunk_overlap
         self.min_chunk_size = 150
-        self.max_article_length = 1200  # Max length for single article
+        self.max_article_length = 1200
         
-        # THÊM: Document registry và links
-        self.document_registry = {}  # {doc_id: metadata}
-        self.document_links = {}     # {source_doc: [target_docs]}
+        # Document registry và links
+        self.document_registry = {}
+        self.document_links = {}
         self.links_file = os.path.join(config.data_path, config.domain, "document_links.json")
         
         self._load_document_links()
         
-        logger.info(f"🔧 DocumentProcessor với legal chunking + document linking")
+        logger.info(f"🔧 Enhanced DocumentProcessor với {len(self.legal_document_types)} legal document types")
     
     def _load_document_links(self):
         """Load document links từ file"""
@@ -112,18 +163,17 @@ class DocumentProcessor:
     
     def _extract_doc_id_from_filename(self, filename: str) -> Optional[str]:
         """Extract document ID từ filename"""
-        # Remove extensions
         base_name = filename.replace('.pdf', '').replace('.txt', '').replace('.docx', '')
         
-        # Check if follows standard format: "77-2020-NĐ-CP"
+        # Check if follows standard format
         if re.match(r'\d+-\d{4}-[A-ZĐ-]+', base_name):
             return base_name
         
         # Try to extract from filename patterns
         patterns = [
-            r'(?:nghị.?định|nd).?(\d+).?(\d{4})',  # "Nghi-dinh-77-2020.pdf"
-            r'(?:thông.?tư|tt).?(\d+).?(\d{4})',    # "Thong-tu-32-2020.pdf"
-            r'(?:luật|luat).?(\d+).?(\d{4})',       # "Luat-47-2019.pdf"
+            r'(?:nghị.?định|nd).?(\d+).?(\d{4})',
+            r'(?:thông.?tư|tt).?(\d+).?(\d{4})',
+            r'(?:luật|luat).?(\d+).?(\d{4})',
         ]
         
         filename_lower = filename.lower()
@@ -144,20 +194,18 @@ class DocumentProcessor:
     
     def _extract_title_from_content(self, content: str) -> str:
         """Extract title từ content"""
-        lines = content.split('\n')[:10]  # First 10 lines
+        lines = content.split('\n')[:10]
         
         for line in lines:
             line = line.strip()
             if len(line) > 20 and len(line) < 200:
-                # Look for title patterns
                 if any(keyword in line.lower() for keyword in ['nghị định', 'thông tư', 'luật số']):
                     return line
         
-        # Fallback
         return "Văn bản pháp luật"
     
     def _extract_document_references(self, content: str) -> List[Dict[str, Any]]:
-        """THÊM: Extract references đến documents khác"""
+        """Extract references đến documents khác"""
         references = []
         content_lower = content.lower()
         
@@ -165,7 +213,6 @@ class DocumentProcessor:
             matches = re.finditer(pattern, content_lower, re.IGNORECASE)
             
             for match in matches:
-                # Determine reference type and target doc_id
                 ref_info = self._parse_reference_match(match, pattern, content)
                 if ref_info:
                     references.append(ref_info)
@@ -175,12 +222,10 @@ class DocumentProcessor:
     def _parse_reference_match(self, match, pattern, content: str) -> Optional[Dict[str, Any]]:
         """Parse reference match thành structured info"""
         try:
-            # Get surrounding context
             start = max(0, match.start() - 50)
             end = min(len(content), match.end() + 50)
             context = content[start:end].strip()
             
-            # Determine target doc_id based on pattern
             groups = match.groups()
             
             if 'nghị.*định' in pattern:
@@ -214,11 +259,10 @@ class DocumentProcessor:
                     }
             
             elif 'theo.*quy.*định' in pattern:
-                # Article reference - need to find which document
                 article_num = groups[0] if groups else None
                 if article_num:
                     return {
-                        'target_doc_id': 'unknown',  # Will be resolved later
+                        'target_doc_id': 'unknown',
                         'ref_type': 'article_reference',
                         'article_ref': f"Điều {article_num}",
                         'context': context,
@@ -227,7 +271,7 @@ class DocumentProcessor:
             
             elif 'bổ.*sung' in pattern:
                 return {
-                    'target_doc_id': 'unknown',  # Need more context
+                    'target_doc_id': 'unknown',
                     'ref_type': 'amends',
                     'context': context,
                     'confidence': 0.6
@@ -239,9 +283,8 @@ class DocumentProcessor:
         return None
     
     def _register_document(self, doc_id: str, title: str, content: str, file_path: str, doc_type: str):
-        """THÊM: Register document và extract links"""
+        """Register document và extract links"""
         try:
-            # Store document metadata
             self.document_registry[doc_id] = {
                 'title': title,
                 'doc_type': doc_type,
@@ -250,11 +293,9 @@ class DocumentProcessor:
                 'registered_at': datetime.now().isoformat()
             }
             
-            # Extract references
             references = self._extract_document_references(content)
             
             if references:
-                # Store links
                 self.document_links[doc_id] = []
                 
                 for ref in references:
@@ -268,93 +309,11 @@ class DocumentProcessor:
                 
                 logger.info(f"🔗 Found {len(self.document_links[doc_id])} references in {doc_id}")
             
-            # Save links
             self._save_document_links()
             
         except Exception as e:
             logger.warning(f"Document registration failed for {doc_id}: {e}")
     
-    def get_document_links(self, doc_id: str) -> Dict[str, Any]:
-        """THÊM: Get all links for a document"""
-        result = {
-            'outgoing': [],  # Documents mà doc_id tham chiếu đến
-            'incoming': []   # Documents tham chiếu đến doc_id
-        }
-        
-        # Outgoing links
-        if doc_id in self.document_links:
-            for link in self.document_links[doc_id]:
-                target_id = link['target']
-                link_info = {
-                    'target_doc_id': target_id,
-                    'target_exists': target_id in self.document_registry,
-                    'ref_type': link['type'],
-                    'article_ref': link.get('article'),
-                    'context': link['context']
-                }
-                
-                # Add target document info if exists
-                if target_id in self.document_registry:
-                    target_doc = self.document_registry[target_id]
-                    link_info['target_title'] = target_doc['title']
-                    link_info['target_type'] = target_doc['doc_type']
-                
-                result['outgoing'].append(link_info)
-        
-        # Incoming links (documents that reference this doc)
-        for source_doc, links in self.document_links.items():
-            if source_doc != doc_id:
-                for link in links:
-                    if link['target'] == doc_id:
-                        if source_doc in self.document_registry:
-                            source_info = {
-                                'source_doc_id': source_doc,
-                                'source_title': self.document_registry[source_doc]['title'],
-                                'source_type': self.document_registry[source_doc]['doc_type'],
-                                'ref_type': link['type'],
-                                'article_ref': link.get('article'),
-                                'context': link['context']
-                            }
-                            result['incoming'].append(source_info)
-        
-        return result
-    
-    def get_related_documents(self, doc_id: str, max_depth: int = 2) -> List[str]:
-        """THÊM: Get related documents by following links"""
-        related = set()
-        to_visit = {doc_id}
-        visited = set()
-        
-        for depth in range(max_depth):
-            current_level = to_visit - visited
-            if not current_level:
-                break
-            
-            visited.update(current_level)
-            next_level = set()
-            
-            for current_doc in current_level:
-                if current_doc != doc_id:
-                    related.add(current_doc)
-                
-                # Add outgoing links
-                if current_doc in self.document_links:
-                    for link in self.document_links[current_doc]:
-                        target = link['target']
-                        if target in self.document_registry:
-                            next_level.add(target)
-                
-                # Add incoming links
-                for source_doc, links in self.document_links.items():
-                    for link in links:
-                        if link['target'] == current_doc and source_doc in self.document_registry:
-                            next_level.add(source_doc)
-            
-            to_visit = next_level
-        
-        return list(related)
-    
-    # Các method khác giữ nguyên từ code gốc...
     def load_text_file(self, file_path: str) -> str:
         """Load text file"""
         encodings = ['utf-8', 'utf-8-sig', 'cp1252']
@@ -416,50 +375,43 @@ class DocumentProcessor:
             return ""
     
     def detect_document_type(self, file_path: str, content: str) -> Dict[str, Any]:
-        """Detect document type"""
+        """SỬA: Enhanced document type detection"""
         file_name = Path(file_path).name.lower()
         content_lower = content.lower()
         
-        doc_types = {
-            'luat': {
-                'file_keywords': ['luat', 'law'],
-                'content_keywords': ['luật số', 'quốc hội'],
-                'legal_level': 'luật'
-            },
-            'nghidinh': {
-                'file_keywords': ['nghidinh', 'decree'],
-                'content_keywords': ['nghị định số', 'thủ tướng'],
-                'legal_level': 'nghị_định'
-            },
-            'thongtu': {
-                'file_keywords': ['thongtu', 'circular'],
-                'content_keywords': ['thông tư số', 'bộ trưởng'],
-                'legal_level': 'thông_tư'
-            }
-        }
-        
         best_type = 'general'
         best_score = 0
+        best_domain = 'general'
         
-        for doc_type, config_item in doc_types.items():
+        # SỬA: Use enhanced legal document types
+        for doc_type, type_info in self.legal_document_types.items():
             score = 0
             
-            if any(kw in file_name for kw in config_item['file_keywords']):
-                score += 0.5
+            # Check file patterns
+            for file_pattern in type_info['file_patterns']:
+                if re.search(file_pattern, file_name):
+                    score += 0.4
+                    break
             
-            if any(kw in content_lower for kw in config_item['content_keywords']):
-                score += 0.5
+            # Check content patterns
+            for content_pattern in type_info['content_patterns']:
+                if re.search(content_pattern, content_lower):
+                    score += 0.6
+                    break
             
             if score > best_score:
                 best_score = score
                 best_type = doc_type
+                best_domain = type_info['domain']
         
         has_legal_structure = self._has_legal_structure(content)
         
         return {
             'primary_type': best_type,
             'confidence': best_score,
-            'legal_level': doc_types.get(best_type, {}).get('legal_level', 'unknown'),
+            'legal_level': best_type,
+            'domain': best_domain,
+            'priority': self.legal_document_types.get(best_type, {}).get('priority', 1),
             'has_legal_structure': has_legal_structure
         }
     
@@ -471,13 +423,13 @@ class DocumentProcessor:
         return dieu_matches >= 2 or khoan_matches >= 5
     
     def chunk_content(self, content: str, metadata: Dict[str, Any]) -> List[str]:
-        """SỬA LOGIC: Chunking theo cấu trúc pháp luật"""
+        """SỬA: Enhanced chunking theo cấu trúc pháp luật với domain awareness"""
         if not content.strip():
             return []
         
         # Try legal structure chunking first
         if metadata.get('has_legal_structure', False):
-            chunks = self._chunk_by_legal_structure(content, metadata)
+            chunks = self._chunk_by_legal_structure_enhanced(content, metadata)
             if chunks and len(chunks) > 1:
                 logger.info(f"✅ Chunked by legal structure: {len(chunks)} chunks")
                 return chunks
@@ -486,8 +438,8 @@ class DocumentProcessor:
         logger.info("📄 Using simple chunking (no legal structure)")
         return self._simple_chunk(content)
     
-    def _chunk_by_legal_structure(self, content: str, metadata: Dict[str, Any]) -> List[str]:
-        """SỬA LOGIC: Chunk theo cấu trúc Điều-Khoản-Điểm"""
+    def _chunk_by_legal_structure_enhanced(self, content: str, metadata: Dict[str, Any]) -> List[str]:
+        """SỬA: Enhanced legal chunking với domain context"""
         chunks = []
         
         # Find all articles (Điều)
@@ -495,6 +447,10 @@ class DocumentProcessor:
         
         if len(article_matches) < 2:
             return []
+        
+        # SỬA: Add document context to each chunk
+        doc_domain = metadata.get('domain', 'general')
+        doc_title = metadata.get('file_name', 'Văn bản pháp luật')
         
         for i, match in enumerate(article_matches):
             start_pos = match.start()
@@ -509,37 +465,36 @@ class DocumentProcessor:
             article_num = match.group(1)
             article_title = match.group(2).strip() if match.group(2) else ""
             
-            # SỬA LOGIC: Create proper legal chunk with header
+            # Create legal chunk với domain context
             if len(article_content) >= self.min_chunk_size:
                 if len(article_content) <= self.max_article_length:
-                    # Single chunk for this article
-                    formatted_chunk = self._format_legal_chunk(
-                        article_content, article_num, article_title, metadata
+                    formatted_chunk = self._format_legal_chunk_with_domain(
+                        article_content, article_num, article_title, metadata, doc_domain
                     )
                     chunks.append(formatted_chunk)
                 else:
-                    # Split long article by paragraphs (Khoản)
-                    sub_chunks = self._split_long_article(
-                        article_content, article_num, article_title, metadata
+                    # Split long article
+                    sub_chunks = self._split_long_article_with_domain(
+                        article_content, article_num, article_title, metadata, doc_domain
                     )
                     chunks.extend(sub_chunks)
         
         return chunks
     
-    def _format_legal_chunk(self, content: str, article_num: str, article_title: str, metadata: Dict[str, Any]) -> str:
-        """SỬA LOGIC: Format chunk với legal header chuẩn"""
-        # Create proper legal reference header
+    def _format_legal_chunk_with_domain(self, content: str, article_num: str, article_title: str, 
+                                       metadata: Dict[str, Any], doc_domain: str) -> str:
+        """SỬA: Format chunk với domain context"""
         doc_name = metadata.get('file_name', 'Văn bản pháp luật')
         legal_level = metadata.get('legal_level', 'unknown')
         
-        # Build header with full reference
+        # Build enhanced header với domain context
         header_parts = []
         
-        # Document reference
-        if legal_level != 'unknown':
-            header_parts.append(f"[{doc_name} - {legal_level.upper()}]")
+        # Document reference với domain
+        if doc_domain != 'general':
+            header_parts.append(f"[{doc_name} - {legal_level.upper()} - {doc_domain}]")
         else:
-            header_parts.append(f"[{doc_name}]")
+            header_parts.append(f"[{doc_name} - {legal_level.upper()}]")
         
         # Article reference
         if article_title:
@@ -547,13 +502,30 @@ class DocumentProcessor:
         else:
             header_parts.append(f"Điều {article_num}")
         
-        # Combine header + content
+        # Add domain context to content
         header = '\n'.join(header_parts)
+        
+        # SỬA: Add domain-specific context keywords
+        domain_keywords = self._get_domain_keywords(doc_domain)
+        if domain_keywords:
+            header += f"\nLĩnh vực: {domain_keywords}"
         
         return f"{header}\n\n{content}"
     
-    def _split_long_article(self, article_content: str, article_num: str, article_title: str, metadata: Dict[str, Any]) -> List[str]:
-        """SỬA LOGIC: Split long article by paragraphs"""
+    def _get_domain_keywords(self, doc_domain: str) -> str:
+        """SỬA: Get domain-specific keywords"""
+        domain_keywords = {
+            'xuất nhập cảnh công dân việt nam': 'xuất cảnh, nhập cảnh, công dân Việt Nam, hộ chiếu',
+            'xuất nhập cảnh người nước ngoài': 'nhập cảnh, xuất cảnh, người nước ngoài, thị thực',
+            'tố tụng hình sự': 'tố tụng hình sự, bị can, bị cáo, khởi tố',
+            'vi phạm hành chính': 'vi phạm hành chính, xử phạt'
+        }
+        
+        return domain_keywords.get(doc_domain, '')
+    
+    def _split_long_article_with_domain(self, article_content: str, article_num: str, article_title: str, 
+                                       metadata: Dict[str, Any], doc_domain: str) -> List[str]:
+        """SỬA: Split long article với domain context"""
         chunks = []
         
         # Find paragraphs (Khoản) within this article
@@ -573,34 +545,34 @@ class DocumentProcessor:
                 paragraph_num = match.group(1)
                 
                 if len(paragraph_content) >= self.min_chunk_size:
-                    # Format with full reference: Điều X, Khoản Y
-                    formatted_chunk = self._format_legal_chunk_with_paragraph(
-                        paragraph_content, article_num, article_title, paragraph_num, metadata
+                    formatted_chunk = self._format_legal_chunk_with_paragraph_and_domain(
+                        paragraph_content, article_num, article_title, paragraph_num, metadata, doc_domain
                     )
                     chunks.append(formatted_chunk)
         else:
             # Split by simple overlap if no clear paragraphs
             simple_chunks = self._simple_chunk(article_content)
             for i, chunk in enumerate(simple_chunks):
-                formatted_chunk = self._format_legal_chunk(
-                    chunk, f"{article_num}.{i+1}", article_title, metadata
+                formatted_chunk = self._format_legal_chunk_with_domain(
+                    chunk, f"{article_num}.{i+1}", article_title, metadata, doc_domain
                 )
                 chunks.append(formatted_chunk)
         
         return chunks
     
-    def _format_legal_chunk_with_paragraph(self, content: str, article_num: str, article_title: str, paragraph_num: str, metadata: Dict[str, Any]) -> str:
-        """Format chunk với paragraph reference"""
+    def _format_legal_chunk_with_paragraph_and_domain(self, content: str, article_num: str, article_title: str, 
+                                                     paragraph_num: str, metadata: Dict[str, Any], doc_domain: str) -> str:
+        """SỬA: Format chunk với paragraph reference và domain"""
         doc_name = metadata.get('file_name', 'Văn bản pháp luật')
         legal_level = metadata.get('legal_level', 'unknown')
         
-        # Build full legal reference
+        # Build full legal reference với domain
         header_parts = []
         
-        if legal_level != 'unknown':
-            header_parts.append(f"[{doc_name} - {legal_level.upper()}]")
+        if doc_domain != 'general':
+            header_parts.append(f"[{doc_name} - {legal_level.upper()} - {doc_domain}]")
         else:
-            header_parts.append(f"[{doc_name}]")
+            header_parts.append(f"[{doc_name} - {legal_level.upper()}]")
         
         # Full reference: Điều X, Khoản Y
         if article_title:
@@ -608,6 +580,11 @@ class DocumentProcessor:
             header_parts.append(f"Khoản {paragraph_num}")
         else:
             header_parts.append(f"Điều {article_num}, Khoản {paragraph_num}")
+        
+        # Add domain context
+        domain_keywords = self._get_domain_keywords(doc_domain)
+        if domain_keywords:
+            header_parts.append(f"Lĩnh vực: {domain_keywords}")
         
         header = '\n'.join(header_parts)
         return f"{header}\n\n{content}"
@@ -631,37 +608,8 @@ class DocumentProcessor:
         
         return chunks
     
-    def extract_legal_info(self, content: str) -> Dict[str, Any]:
-        """Extract basic legal information"""
-        info = {
-            'articles': [],
-            'legal_docs': [],
-            'content_stats': {}
-        }
-        
-        # Extract articles
-        for match in re.finditer(self.legal_patterns['article'], content, re.IGNORECASE):
-            info['articles'].append({
-                'number': match.group(1),
-                'title': match.group(2).strip() if match.group(2) else "",
-                'position': match.start()
-            })
-        
-        # Extract legal documents
-        for match in re.finditer(self.legal_patterns['legal_doc'], content, re.IGNORECASE):
-            info['legal_docs'].append(match.group(0))
-        
-        # Content stats
-        info['content_stats'] = {
-            'total_length': len(content),
-            'articles_count': len(info['articles']),
-            'legal_docs_count': len(info['legal_docs'])
-        }
-        
-        return info
-    
     def process_file(self, file_path: str) -> List[Document]:
-        """Process single file với enhanced metadata + document linking"""
+        """SỬA: Process file với enhanced metadata và domain awareness"""
         file_ext = Path(file_path).suffix.lower()
         file_name = Path(file_path).name
         
@@ -684,28 +632,28 @@ class DocumentProcessor:
             logger.warning(f"Empty content: {file_name}")
             return []
         
-        # Analyze document
+        # SỬA: Enhanced document analysis
         doc_metadata = self.detect_document_type(file_path, content)
         legal_info = self.extract_legal_info(content)
         
-        # THÊM: Extract doc_id và register document
+        # Extract doc_id và register document
         doc_id = self._extract_doc_id_from_filename(file_name)
         title = self._extract_title_from_content(content)
         
         if doc_id:
             self._register_document(doc_id, title, content, file_path, doc_metadata['primary_type'])
         
-        # SỬA LOGIC: Chunk with enhanced legal structure
+        # SỬA: Enhanced chunking với domain awareness
         chunks = self.chunk_content(content, doc_metadata)
         
         if not chunks:
             logger.warning(f"No valid chunks: {file_name}")
             return []
         
-        # Create documents with enhanced metadata
+        # Create documents với enhanced metadata
         documents = []
         for i, chunk in enumerate(chunks):
-            # SỬA LOGIC: Enhanced metadata với legal structure info + document linking
+            # SỬA: Enhanced metadata với domain awareness
             metadata = {
                 'source': file_path,
                 'file_name': file_name,
@@ -719,12 +667,17 @@ class DocumentProcessor:
                 'content_type': 'legal_document',
                 'chunk_size': len(chunk),
                 
-                # SỬA LOGIC: Thêm legal reference info
+                # SỬA: Enhanced legal reference info
                 'legal_reference': self._extract_chunk_legal_reference(chunk),
                 'contains_articles': self._count_articles_in_chunk(chunk),
                 'contains_paragraphs': self._count_paragraphs_in_chunk(chunk),
                 
-                # THÊM: Document linking metadata
+                # SỬA: Domain-specific metadata
+                'document_domain': doc_metadata['domain'],
+                'domain_priority': doc_metadata['priority'],
+                'domain_keywords': self._get_domain_keywords(doc_metadata['domain']),
+                
+                # Document linking metadata
                 'doc_id': doc_id,
                 'document_title': title,
                 'has_document_links': doc_id in self.document_links if doc_id else False,
@@ -734,14 +687,14 @@ class DocumentProcessor:
             documents.append(Document(content=chunk, metadata=metadata))
         
         logger.info(f"✅ Created {len(documents)} chunks from {file_name}")
+        logger.info(f"🏷️ Domain: {doc_metadata['domain']} (priority: {doc_metadata['priority']})")
         if doc_id and doc_id in self.document_links:
             logger.info(f"🔗 Document has {len(self.document_links[doc_id])} references")
         
         return documents
     
     def _extract_chunk_legal_reference(self, chunk: str) -> str:
-        """SỬA LOGIC: Extract legal reference from chunk"""
-        # Look for legal reference in header
+        """Extract legal reference from chunk"""
         lines = chunk.split('\n')
         
         # Check first few lines for legal reference
@@ -777,8 +730,37 @@ class DocumentProcessor:
         """Count paragraphs in chunk"""
         return len(re.findall(self.legal_patterns['paragraph'], chunk, re.IGNORECASE))
     
+    def extract_legal_info(self, content: str) -> Dict[str, Any]:
+        """Extract basic legal information"""
+        info = {
+            'articles': [],
+            'legal_docs': [],
+            'content_stats': {}
+        }
+        
+        # Extract articles
+        for match in re.finditer(self.legal_patterns['article'], content, re.IGNORECASE):
+            info['articles'].append({
+                'number': match.group(1),
+                'title': match.group(2).strip() if match.group(2) else "",
+                'position': match.start()
+            })
+        
+        # Extract legal documents
+        for match in re.finditer(self.legal_patterns['legal_doc'], content, re.IGNORECASE):
+            info['legal_docs'].append(match.group(0))
+        
+        # Content stats
+        info['content_stats'] = {
+            'total_length': len(content),
+            'articles_count': len(info['articles']),
+            'legal_docs_count': len(info['legal_docs'])
+        }
+        
+        return info
+    
     def process_directory(self, directory_path: str = None) -> List[Document]:
-        """Process directory với enhanced stats + document linking"""
+        """SỬA: Process directory với enhanced stats"""
         if directory_path is None:
             directory_path = config.documents_path
         
@@ -796,7 +778,8 @@ class DocumentProcessor:
             'legal_chunks': 0,
             'articles_found': 0,
             'documents_with_links': 0,
-            'total_references': 0
+            'total_references': 0,
+            'domain_breakdown': {}
         }
         
         for file_path in Path(directory_path).rglob("*"):
@@ -814,6 +797,12 @@ class DocumentProcessor:
                         
                         stats['legal_chunks'] += legal_chunks
                         stats['articles_found'] += articles_found
+                        
+                        # SỬA: Count by domain
+                        domain = docs[0].metadata.get('document_domain', 'general')
+                        if domain not in stats['domain_breakdown']:
+                            stats['domain_breakdown'][domain] = 0
+                        stats['domain_breakdown'][domain] += len(docs)
                         
                         # Count document links
                         doc_id = docs[0].metadata.get('doc_id') if docs else None
@@ -833,11 +822,92 @@ class DocumentProcessor:
         logger.info(f"   📜 Articles found: {stats['articles_found']}")
         logger.info(f"   🔗 Documents with links: {stats['documents_with_links']}")
         logger.info(f"   📎 Total references: {stats['total_references']}")
+        logger.info(f"   🏷️ Domain breakdown: {stats['domain_breakdown']}")
         
         return all_documents
     
+    def get_document_links(self, doc_id: str) -> Dict[str, Any]:
+        """Get all links for a document"""
+        result = {
+            'outgoing': [],  # Documents mà doc_id tham chiếu đến
+            'incoming': []   # Documents tham chiếu đến doc_id
+        }
+        
+        # Outgoing links
+        if doc_id in self.document_links:
+            for link in self.document_links[doc_id]:
+                target_id = link['target']
+                link_info = {
+                    'target_doc_id': target_id,
+                    'target_exists': target_id in self.document_registry,
+                    'ref_type': link['type'],
+                    'article_ref': link.get('article'),
+                    'context': link['context']
+                }
+                
+                # Add target document info if exists
+                if target_id in self.document_registry:
+                    target_doc = self.document_registry[target_id]
+                    link_info['target_title'] = target_doc['title']
+                    link_info['target_type'] = target_doc['doc_type']
+                
+                result['outgoing'].append(link_info)
+        
+        # Incoming links (documents that reference this doc)
+        for source_doc, links in self.document_links.items():
+            if source_doc != doc_id:
+                for link in links:
+                    if link['target'] == doc_id:
+                        if source_doc in self.document_registry:
+                            source_info = {
+                                'source_doc_id': source_doc,
+                                'source_title': self.document_registry[source_doc]['title'],
+                                'source_type': self.document_registry[source_doc]['doc_type'],
+                                'ref_type': link['type'],
+                                'article_ref': link.get('article'),
+                                'context': link['context']
+                            }
+                            result['incoming'].append(source_info)
+        
+        return result
+    
+    def get_related_documents(self, doc_id: str, max_depth: int = 2) -> List[str]:
+        """Get related documents by following links"""
+        related = set()
+        to_visit = {doc_id}
+        visited = set()
+        
+        for depth in range(max_depth):
+            current_level = to_visit - visited
+            if not current_level:
+                break
+            
+            visited.update(current_level)
+            next_level = set()
+            
+            for current_doc in current_level:
+                if current_doc != doc_id:
+                    related.add(current_doc)
+                
+                # Add outgoing links
+                if current_doc in self.document_links:
+                    for link in self.document_links[current_doc]:
+                        target = link['target']
+                        if target in self.document_registry:
+                            next_level.add(target)
+                
+                # Add incoming links
+                for source_doc, links in self.document_links.items():
+                    for link in links:
+                        if link['target'] == current_doc and source_doc in self.document_registry:
+                            next_level.add(source_doc)
+            
+            to_visit = next_level
+        
+        return list(related)
+    
     def get_linking_stats(self) -> Dict[str, Any]:
-        """THÊM: Get document linking statistics"""
+        """Get document linking statistics"""
         total_docs = len(self.document_registry)
         docs_with_links = len(self.document_links)
         total_refs = sum(len(links) for links in self.document_links.values())
@@ -889,7 +959,7 @@ class DocumentProcessor:
         return result
     
     def find_related_content_for_context(self, doc_id: str, max_results: int = 3) -> List[Dict[str, Any]]:
-        """THÊM: Find related content for context building"""
+        """Find related content for context building"""
         if doc_id not in self.document_registry:
             return []
         

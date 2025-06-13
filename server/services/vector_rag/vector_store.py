@@ -1,6 +1,6 @@
 # server/services/vector_rag/vector_store.py  
 """
-Vector Store - SỬA LOGIC: Thêm entity reranking
+Vector Store - REBUILT: Simple but smart legal search
 """
 import os
 import json
@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional
 import logging
 from datetime import datetime
 import numpy as np
+import re
 
 try:
     import faiss
@@ -24,7 +25,7 @@ from services.vector_rag.embeddings import VietnameseEmbeddingModel
 logger = logging.getLogger(__name__)
 
 class VectorStore:
-    """Vector Store với entity reranking"""
+    """REBUILT: Smart vector store without hardcoded rules"""
     
     def __init__(self):
         self.config = config
@@ -46,18 +47,6 @@ class VectorStore:
         
         # Settings
         self.similarity_threshold = config.min_similarity_threshold
-        
-        # SỬA LOGIC: Entity reranking settings
-        self.critical_entities = {
-            'hộ chiếu': ['hộ chiếu', 'passport', 'ho chieu'],
-            'thị thực': ['thị thực', 'visa', 'thi thuc'],
-            'tạm trú': ['tạm trú', 'tam tru'],
-            'thường trú': ['thường trú', 'thuong tru'],
-            'trẻ em': ['trẻ em', 'tre em', 'children'],
-            'lệ phí': ['lệ phí', 'le phi', 'phí'],
-            'điều kiện': ['điều kiện', 'dieu kien', 'yêu cầu'],
-            'hồ sơ': ['hồ sơ', 'ho so', 'giấy tờ']
-        }
         
         # Stats
         self.stats = {
@@ -201,11 +190,12 @@ class VectorStore:
             logger.error(f"❌ Add documents failed: {e}")
             return False
     
+    # MAIN SEARCH METHOD - REBUILT
     async def search(self, query: str, k: int = None, 
                     search_type: str = "normal",
                     filter_metadata: Dict = None,
                     query_entities: List[str] = None) -> List[Dict]:
-        """SỬA LOGIC: Search với entity reranking"""
+        """REBUILT: Smart search without hardcoded rules"""
         k = k or config.search_k
         
         try:
@@ -213,110 +203,211 @@ class VectorStore:
                 logger.warning("Vector store is empty")
                 return []
             
-            query_embedding = self.embedding_model.embed_query(query)
+            # Step 1: Analyze query to understand intent
+            query_analysis = self._analyze_query(query)
             
-            if not query_embedding:
-                logger.error("Failed to generate query embedding")
-                return []
+            # Step 2: Create search strategies based on analysis
+            search_strategies = self._create_search_strategies(query, query_analysis)
             
-            # Exact legal search for specific articles
-            if search_type == "exact_legal" and self._is_exact_legal_query(query):
-                return await self._exact_legal_search(query, query_embedding, k)
+            # Step 3: Execute multiple searches
+            all_results = []
+            for strategy in search_strategies:
+                results = await self._execute_search_strategy(strategy, k)
+                all_results.extend(results)
             
-            # Normal semantic search
-            results = await self._semantic_search(query_embedding, k * 2, filter_metadata)  # Get more for reranking
+            # Step 4: Merge and deduplicate
+            unique_results = self._merge_and_deduplicate(all_results)
             
-            # SỬA LOGIC: Apply entity reranking
-            if query_entities and results:
-                results = self._rerank_by_entities(results, query_entities, query)
+            # Step 5: Smart ranking based on query intent
+            ranked_results = self._smart_ranking(unique_results, query, query_analysis)
             
-            return results[:k]  # Return top k after reranking
+            # Step 6: Apply entity filtering if provided
+            if query_entities:
+                ranked_results = self._filter_by_entities(ranked_results, query_entities)
+            
+            # Step 7: Apply metadata filtering
+            if filter_metadata:
+                ranked_results = [r for r in ranked_results 
+                                if self._match_metadata_filter(r.get('metadata', {}), filter_metadata)]
+            
+            logger.info(f"🔍 Search: {len(ranked_results)} results for '{query[:50]}...'")
+            return ranked_results[:k]
             
         except Exception as e:
             logger.error(f"❌ Search failed: {e}")
             return []
     
-    def _is_exact_legal_query(self, query: str) -> bool:
-        """Check if query asks for exact legal article"""
-        import re
-        
-        exact_patterns = [
-            r'điều\s+\d+[a-z]?\s+(luật|nghị\s*định|thông\s*tư)',
-            r'khoản\s+\d+\s+điều\s+\d+',
-            r'điểm\s+[a-z]+\s+khoản\s+\d+'
-        ]
-        
-        query_lower = query.lower()
-        return any(re.search(pattern, query_lower) for pattern in exact_patterns)
-    
-    async def _exact_legal_search(self, query: str, query_embedding: List[float], k: int) -> List[Dict]:
-        """Exact legal article search"""
-        import re
-        
+    def _analyze_query(self, query: str) -> Dict[str, Any]:
+        """Analyze query to understand legal intent"""
         query_lower = query.lower()
         
-        article_match = re.search(r'điều\s+(\d+[a-z]?)', query_lower)
-        article_num = article_match.group(1) if article_match else None
+        analysis = {
+            'legal_terms': [],
+            'entities': [],
+            'question_type': 'general',
+            'legal_domains': [],
+            'complexity': 'simple'
+        }
         
-        candidates = await self._semantic_search(query_embedding, k * 2)
+        # Extract legal terms
+        legal_patterns = {
+            'articles': r'điều\s+\d+[a-z]?',
+            'laws': r'luật\s+[^,\n]+',
+            'decrees': r'nghị\s*định\s+số\s+\d+',
+            'circulars': r'thông\s*tư\s+số\s+\d+',
+            'paragraphs': r'khoản\s+\d+',
+            'points': r'điểm\s+[a-z]+'
+        }
         
-        exact_matches = []
-        partial_matches = []
+        for term_type, pattern in legal_patterns.items():
+            matches = re.findall(pattern, query_lower)
+            if matches:
+                analysis['legal_terms'].extend([(term_type, match) for match in matches])
         
-        for candidate in candidates:
-            content = candidate['content'].lower()
-            
-            article_score = 0
-            if article_num and f'điều {article_num}' in content:
-                article_score = 2.0
-            elif article_num and f'điều{article_num}' in content:
-                article_score = 1.5
-            
-            enhanced_score = candidate['score'] + article_score
-            
-            enhanced_candidate = candidate.copy()
-            enhanced_candidate['enhanced_score'] = enhanced_score
-            enhanced_candidate['article_match'] = article_score > 0
-            
-            if article_score >= 1.5:
-                exact_matches.append(enhanced_candidate)
-            else:
-                partial_matches.append(enhanced_candidate)
+        # Extract entities
+        entity_patterns = {
+            'people': r'(?:bị\s+(?:can|cáo|khởi\s+tố)|công\s+dân|người\s+nước\s+ngoài)',
+            'documents': r'(?:hộ\s+chiếu|thị\s+thực|visa|giấy\s+tờ)',
+            'actions': r'(?:xuất\s+cảnh|nhập\s+cảnh|tạm\s+hoãn|cấm|cấp)'
+        }
         
-        exact_matches.sort(key=lambda x: x['enhanced_score'], reverse=True)
-        partial_matches.sort(key=lambda x: x['enhanced_score'], reverse=True)
+        for entity_type, pattern in entity_patterns.items():
+            matches = re.findall(pattern, query_lower)
+            if matches:
+                analysis['entities'].extend([(entity_type, match) for match in matches])
         
-        results = exact_matches[:k//2] + partial_matches[:k//2]
-        return results[:k]
+        # Determine question type
+        if any(word in query_lower for word in ['có được', 'được không', 'có thể']):
+            analysis['question_type'] = 'permission'
+        elif any(word in query_lower for word in ['điều kiện', 'yêu cầu']):
+            analysis['question_type'] = 'requirements'
+        elif any(word in query_lower for word in ['thủ tục', 'cách', 'làm thế nào']):
+            analysis['question_type'] = 'procedure'
+        elif any(word in query_lower for word in ['phí', 'lệ phí', 'bao nhiêu']):
+            analysis['question_type'] = 'cost'
+        elif any(word in query_lower for word in ['là gì', 'định nghĩa']):
+            analysis['question_type'] = 'definition'
+        
+        # Detect legal domains dynamically
+        domain_indicators = {
+            'criminal_law': ['khởi tố', 'bị can', 'bị cáo', 'tố tụng', 'hình sự'],
+            'immigration_citizens': ['xuất cảnh', 'nhập cảnh', 'công dân', 'hộ chiếu'],
+            'immigration_foreigners': ['người nước ngoài', 'thị thực', 'visa'],
+            'administrative': ['vi phạm hành chính', 'xử phạt']
+        }
+        
+        for domain, indicators in domain_indicators.items():
+            if any(indicator in query_lower for indicator in indicators):
+                analysis['legal_domains'].append(domain)
+        
+        # Determine complexity
+        if len(analysis['legal_terms']) > 2 or len(analysis['legal_domains']) > 1:
+            analysis['complexity'] = 'complex'
+        elif analysis['legal_terms'] or analysis['legal_domains']:
+            analysis['complexity'] = 'moderate'
+        
+        return analysis
     
-    async def _semantic_search(self, query_embedding: List[float], k: int, 
-                              filter_metadata: Dict = None) -> List[Dict]:
-        """Standard semantic search"""
+    def _create_search_strategies(self, query: str, analysis: Dict) -> List[Dict]:
+        """Create search strategies based on query analysis"""
+        strategies = []
+        
+        # Strategy 1: Direct query search
+        strategies.append({
+            'type': 'direct',
+            'query': query,
+            'weight': 1.0
+        })
+        
+        # Strategy 2: Enhanced query with legal terms
+        if analysis['legal_terms']:
+            enhanced_terms = []
+            for term_type, term in analysis['legal_terms']:
+                enhanced_terms.append(term)
+            
+            enhanced_query = f"{query} {' '.join(enhanced_terms)}"
+            strategies.append({
+                'type': 'enhanced_legal',
+                'query': enhanced_query,
+                'weight': 1.2
+            })
+        
+        # Strategy 3: Domain-specific searches
+        for domain in analysis['legal_domains']:
+            domain_keywords = self._get_domain_keywords(domain)
+            domain_query = f"{query} {' '.join(domain_keywords[:3])}"
+            strategies.append({
+                'type': 'domain_specific',
+                'query': domain_query,
+                'domain': domain,
+                'weight': 0.8
+            })
+        
+        # Strategy 4: Entity-focused search
+        if analysis['entities']:
+            entity_terms = [term for _, term in analysis['entities']]
+            entity_query = f"{query} {' '.join(entity_terms)}"
+            strategies.append({
+                'type': 'entity_focused',
+                'query': entity_query,
+                'weight': 0.9
+            })
+        
+        # Strategy 5: Cross-domain search for complex queries
+        if analysis['complexity'] == 'complex' and len(analysis['legal_domains']) > 1:
+            cross_terms = []
+            for domain in analysis['legal_domains']:
+                cross_terms.extend(self._get_domain_keywords(domain)[:2])
+            
+            cross_query = f"{query} {' '.join(cross_terms)}"
+            strategies.append({
+                'type': 'cross_domain',
+                'query': cross_query,
+                'weight': 1.1
+            })
+        
+        return strategies
+    
+    def _get_domain_keywords(self, domain: str) -> List[str]:
+        """Get keywords for legal domain"""
+        domain_keywords = {
+            'criminal_law': ['tố tụng hình sự', 'bộ luật', 'điều tra', 'tạm hoãn', 'cấm'],
+            'immigration_citizens': ['luật xuất cảnh nhập cảnh', 'công dân việt nam', 'điều kiện'],
+            'immigration_foreigners': ['người nước ngoài', 'cư trú', 'tạm trú', 'thường trú'],
+            'administrative': ['vi phạm', 'xử phạt', 'hành chính']
+        }
+        
+        return domain_keywords.get(domain, [])
+    
+    async def _execute_search_strategy(self, strategy: Dict, k: int) -> List[Dict]:
+        """Execute a single search strategy"""
         try:
+            query_embedding = self.embedding_model.embed_query(strategy['query'])
+            
+            if not query_embedding:
+                return []
+            
+            # Adjust search parameters based on strategy
+            search_k = k * 2 if strategy['type'] == 'direct' else k
+            threshold = self.similarity_threshold * 0.8 if strategy['type'] == 'cross_domain' else self.similarity_threshold
+            
+            # Perform vector search
             query_vector = np.array([query_embedding], dtype=np.float32)
             faiss.normalize_L2(query_vector)
             
-            similarities, indices = self.index.search(query_vector, k)
+            similarities, indices = self.index.search(query_vector, min(search_k, len(self.documents)))
             
             results = []
-            for i, (similarity, doc_idx) in enumerate(zip(similarities[0], indices[0])):
-                if doc_idx >= len(self.documents):
+            for similarity, doc_idx in zip(similarities[0], indices[0]):
+                if doc_idx >= len(self.documents) or similarity < threshold:
                     continue
-                
-                if similarity < self.similarity_threshold:
-                    continue
-                
-                content = self.documents[doc_idx]
-                metadata = self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {}
-                
-                if filter_metadata:
-                    if not self._match_metadata_filter(metadata, filter_metadata):
-                        continue
                 
                 result = {
-                    'content': content,
-                    'metadata': metadata,
+                    'content': self.documents[doc_idx],
+                    'metadata': self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {},
                     'score': float(similarity),
+                    'strategy': strategy['type'],
+                    'strategy_weight': strategy['weight'],
                     'index': int(doc_idx)
                 }
                 
@@ -325,116 +416,98 @@ class VectorStore:
             return results
             
         except Exception as e:
-            logger.error(f"Semantic search failed: {e}")
+            logger.error(f"Strategy execution failed: {e}")
             return []
     
-    def _rerank_by_entities(self, results: List[Dict], query_entities: List[str], query: str) -> List[Dict]:
-        """SỬA LOGIC: Rerank results by entity matching"""
+    def _merge_and_deduplicate(self, all_results: List[Dict]) -> List[Dict]:
+        """Merge results from different strategies and remove duplicates"""
+        seen_indices = set()
+        unique_results = []
+        
+        # Sort by strategy weight first
+        all_results.sort(key=lambda x: x.get('strategy_weight', 0), reverse=True)
+        
+        for result in all_results:
+            doc_index = result.get('index')
+            if doc_index not in seen_indices:
+                seen_indices.add(doc_index)
+                unique_results.append(result)
+        
+        return unique_results
+    
+    def _smart_ranking(self, results: List[Dict], query: str, analysis: Dict) -> List[Dict]:
+        """Smart ranking based on query analysis"""
+        query_lower = query.lower()
+        
+        for result in results:
+            content_lower = result['content'].lower()
+            base_score = result['score']
+            bonus_score = 0.0
+            
+            # Bonus for legal term matches
+            for term_type, term in analysis['legal_terms']:
+                if term in content_lower:
+                    if term_type == 'articles':
+                        bonus_score += 0.3  # High bonus for specific articles
+                    elif term_type == 'laws':
+                        bonus_score += 0.2
+                    else:
+                        bonus_score += 0.1
+            
+            # Bonus for entity matches
+            for entity_type, entity in analysis['entities']:
+                if entity in content_lower:
+                    if entity_type == 'people':
+                        bonus_score += 0.2
+                    elif entity_type == 'actions':
+                        bonus_score += 0.15
+                    else:
+                        bonus_score += 0.1
+            
+            # Bonus for question type relevance
+            if analysis['question_type'] == 'permission':
+                permission_indicators = ['được', 'không được', 'có thể', 'cấm', 'cho phép']
+                permission_matches = sum(1 for indicator in permission_indicators if indicator in content_lower)
+                bonus_score += permission_matches * 0.1
+            
+            elif analysis['question_type'] == 'requirements':
+                requirement_indicators = ['điều kiện', 'yêu cầu', 'phải', 'cần']
+                requirement_matches = sum(1 for indicator in requirement_indicators if indicator in content_lower)
+                bonus_score += requirement_matches * 0.1
+            
+            # Strategy weight bonus
+            strategy_bonus = (result.get('strategy_weight', 1.0) - 1.0) * 0.1
+            
+            # Calculate final score
+            result['final_score'] = base_score + bonus_score + strategy_bonus
+            result['bonus_breakdown'] = {
+                'legal_terms': sum(0.1 for _, term in analysis['legal_terms'] if term in content_lower),
+                'entities': sum(0.1 for _, entity in analysis['entities'] if entity in content_lower),
+                'question_type': bonus_score - sum(0.1 for _, term in analysis['legal_terms'] if term in content_lower) - sum(0.1 for _, entity in analysis['entities'] if entity in content_lower),
+                'strategy': strategy_bonus
+            }
+        
+        # Sort by final score
+        results.sort(key=lambda x: x['final_score'], reverse=True)
+        return results
+    
+    def _filter_by_entities(self, results: List[Dict], query_entities: List[str]) -> List[Dict]:
+        """Filter results by entity relevance"""
         if not query_entities:
             return results
         
-        logger.info(f"🔄 Reranking {len(results)} results by entities: {query_entities}")
-        
-        reranked = []
+        filtered_results = []
         
         for result in results:
-            content = result.get('content', '').lower()
-            original_score = result.get('score', 0.5)
+            content_lower = result['content'].lower()
+            entity_matches = sum(1 for entity in query_entities if entity.lower() in content_lower)
             
-            # Calculate entity matching score
-            entity_score = self._calculate_entity_score(content, query_entities)
-            
-            # Calculate final score
-            final_score = original_score + entity_score
-            
-            # Track entity matches for debugging
-            matched_entities = []
-            missing_entities = []
-            
-            for entity in query_entities:
-                if self._entity_exists_in_content(entity, content):
-                    matched_entities.append(entity)
-                else:
-                    missing_entities.append(entity)
-            
-            # Add enhanced result
-            enhanced_result = result.copy()
-            enhanced_result['entity_score'] = entity_score
-            enhanced_result['final_score'] = max(final_score, 0.0)
-            enhanced_result['matched_entities'] = matched_entities
-            enhanced_result['missing_entities'] = missing_entities
-            
-            reranked.append(enhanced_result)
+            # Keep results with at least some entity matches
+            if entity_matches > 0:
+                result['entity_match_score'] = entity_matches / len(query_entities)
+                filtered_results.append(result)
         
-        # Sort by final score
-        reranked.sort(key=lambda x: x['final_score'], reverse=True)
-        
-        # Filter out results with too many missing critical entities
-        filtered = []
-        for result in reranked:
-            critical_missing = [e for e in result['missing_entities'] 
-                              if e.lower() in self.critical_entities]
-            
-            # Skip if missing too many critical entities
-            if len(critical_missing) > 2:
-                logger.debug(f"❌ Filtered: missing {critical_missing}")
-                continue
-            
-            # Skip if final score too low
-            if result['final_score'] < 0.2:
-                logger.debug(f"❌ Filtered: score {result['final_score']:.3f}")
-                continue
-            
-            filtered.append(result)
-        
-        logger.info(f"✅ Reranked: {len(results)} → {len(filtered)} results")
-        return filtered
-    
-    def _calculate_entity_score(self, content: str, query_entities: List[str]) -> float:
-        """Calculate entity matching score"""
-        if not query_entities:
-            return 0.0
-        
-        score = 0.0
-        matched_count = 0
-        
-        for entity in query_entities:
-            if self._entity_exists_in_content(entity, content):
-                matched_count += 1
-                
-                # Bonus for critical entities
-                if entity.lower() in self.critical_entities:
-                    score += 0.15
-                else:
-                    score += 0.1
-        
-        # Penalty for missing entities
-        missing_count = len(query_entities) - matched_count
-        if missing_count > 0:
-            score -= missing_count * 0.1
-        
-        # Bonus for high match ratio
-        match_ratio = matched_count / len(query_entities)
-        if match_ratio >= 0.8:
-            score += 0.1
-        
-        return score
-    
-    def _entity_exists_in_content(self, entity: str, content: str) -> bool:
-        """Check if entity exists in content"""
-        entity_lower = entity.lower()
-        
-        # Direct match
-        if entity_lower in content:
-            return True
-        
-        # Check variants
-        if entity_lower in self.critical_entities:
-            variants = self.critical_entities[entity_lower]
-            if any(variant in content for variant in variants):
-                return True
-        
-        return False
+        return filtered_results
     
     def _match_metadata_filter(self, metadata: Dict, filter_criteria: Dict) -> bool:
         """Check if metadata matches filter criteria"""
@@ -451,6 +524,94 @@ class VectorStore:
         
         return True
     
+    # COMPREHENSIVE SEARCH FOR COMPLEX QUERIES
+    async def search_comprehensive(self, query: str, k: int = None) -> List[Dict]:
+        """Comprehensive search for complex legal queries"""
+        k = k or config.search_k
+        
+        try:
+            # Analyze query complexity
+            analysis = self._analyze_query(query)
+            
+            if analysis['complexity'] == 'simple':
+                # Use regular search for simple queries
+                return await self.search(query, k=k)
+            
+            # For complex queries, use expanded search
+            expanded_k = k * 3
+            
+            # Create comprehensive search strategies
+            strategies = self._create_search_strategies(query, analysis)
+            
+            # Add additional semantic variations
+            semantic_variations = self._generate_semantic_variations(query, analysis)
+            for variation in semantic_variations:
+                strategies.append({
+                    'type': 'semantic_variation',
+                    'query': variation,
+                    'weight': 0.7
+                })
+            
+            # Execute all strategies
+            all_results = []
+            for strategy in strategies:
+                results = await self._execute_search_strategy(strategy, expanded_k // len(strategies))
+                all_results.extend(results)
+            
+            # Advanced processing for comprehensive results
+            unique_results = self._merge_and_deduplicate(all_results)
+            ranked_results = self._smart_ranking(unique_results, query, analysis)
+            
+            # Additional filtering for comprehensive search
+            filtered_results = self._filter_comprehensive_results(ranked_results, query, analysis)
+            
+            logger.info(f"🔍 Comprehensive search: {len(filtered_results)} results")
+            return filtered_results[:k*2]  # Return more results for comprehensive search
+            
+        except Exception as e:
+            logger.error(f"❌ Comprehensive search failed: {e}")
+            return await self.search(query, k=k)
+    
+    def _generate_semantic_variations(self, query: str, analysis: Dict) -> List[str]:
+        """Generate semantic variations of the query"""
+        variations = []
+        
+        # Synonym replacement
+        synonyms = {
+            'có được': ['được phép', 'có thể', 'được'],
+            'bị khởi tố': ['bị truy tố', 'bị điều tra', 'bị can'],
+            'xuất cảnh': ['ra nước ngoài', 'đi nước ngoài'],
+            'điều kiện': ['yêu cầu', 'quy định']
+        }
+        
+        query_lower = query.lower()
+        for original, replacements in synonyms.items():
+            if original in query_lower:
+                for replacement in replacements:
+                    variation = query_lower.replace(original, replacement)
+                    variations.append(variation)
+        
+        # Add context variations based on legal domains
+        for domain in analysis['legal_domains']:
+            domain_keywords = self._get_domain_keywords(domain)
+            for keyword in domain_keywords[:2]:
+                variations.append(f"{query} {keyword}")
+        
+        return variations[:5]  # Limit variations
+    
+    def _filter_comprehensive_results(self, results: List[Dict], query: str, analysis: Dict) -> List[Dict]:
+        """Additional filtering for comprehensive search results"""
+        # Remove very low relevance results
+        min_score = 0.1 if analysis['complexity'] == 'complex' else 0.15
+        
+        filtered = []
+        for result in results:
+            if result['final_score'] >= min_score:
+                filtered.append(result)
+        
+        return filtered
+    
+    # UTILITY METHODS
     async def similarity_search_with_threshold(self, query: str, threshold: float = None) -> List[Dict]:
         """Search with custom similarity threshold"""
         original_threshold = self.similarity_threshold
@@ -477,8 +638,7 @@ class VectorStore:
             'similarity_threshold': self.similarity_threshold,
             'index_size_mb': round(index_size_mb, 2),
             'last_updated': self.stats.get('last_updated'),
-            'faiss_index_type': str(type(self.index).__name__) if self.index else 'None',
-            'critical_entities': len(self.critical_entities)
+            'faiss_index_type': str(type(self.index).__name__) if self.index else 'None'
         }
     
     def clear_store(self):
@@ -490,83 +650,3 @@ class VectorStore:
                 os.remove(file_path)
         
         logger.info("🗑️ Vector store cleared")
-
-    async def search_comprehensive(self, query: str, k: int = None) -> List[Dict]:
-        """THÊM: Comprehensive search - lấy TẤT CẢ content liên quan"""
-        k = k or config.search_k
-        
-        try:
-            # Step 1: Normal semantic search với threshold thấp
-            primary_results = await self.search(
-                query, 
-                k=k*2,  # Double the normal amount
-                search_type="normal"
-            )
-            
-            # Step 2: Extract key entities từ primary results
-            key_entities = self._extract_entities_from_results(primary_results)
-            
-            # Step 3: Search cho từng entity để tìm related content
-            related_results = []
-            for entity in key_entities[:5]:  # Top 5 entities
-                entity_results = await self.search(
-                    entity,
-                    k=3,
-                    search_type="normal"
-                )
-                related_results.extend(entity_results)
-            
-            # Step 4: Merge và deduplicate
-            all_results = primary_results + related_results
-            unique_results = self._deduplicate_results(all_results)
-            
-            # Step 5: Sort by relevance
-            sorted_results = sorted(unique_results, 
-                                key=lambda x: x.get('final_score', x.get('score', 0)), 
-                                reverse=True)
-            
-            logger.info(f"🔍 Comprehensive search: {len(sorted_results)} total results")
-            return sorted_results[:k*3]  # Return up to 3x normal amount
-            
-        except Exception as e:
-            logger.error(f"❌ Comprehensive search failed: {e}")
-            return await self.search(query, k=k)  # Fallback to normal search
-
-    def _extract_entities_from_results(self, results: List[Dict]) -> List[str]:
-        """Extract key legal entities từ search results"""
-        import re
-        
-        entities = set()
-        
-        for result in results[:3]:  # Top 3 results
-            content = result.get('content', '')
-            
-            # Extract legal references
-            legal_refs = re.findall(r'(Luật số \d+/\d{4}|Nghị định số \d+/\d{4}|Thông tư số \d+/\d{4})', content)
-            entities.update(legal_refs[:2])  # Top 2 legal docs
-            
-            # Extract articles
-            articles = re.findall(r'Điều \d+[a-z]?', content)
-            entities.update(articles[:3])  # Top 3 articles
-            
-            # Extract key terms
-            key_terms = re.findall(r'(hộ chiếu|thị thực|tạm trú|thường trú|xuất cảnh|nhập cảnh)', content.lower())
-            entities.update(key_terms[:2])
-        
-        return list(entities)
-
-    def _deduplicate_results(self, results: List[Dict]) -> List[Dict]:
-        """Remove duplicate results based on content similarity"""
-        unique_results = []
-        seen_content_hashes = set()
-        
-        for result in results:
-            content = result.get('content', '')
-            # Create simple hash from first 200 chars
-            content_hash = hash(content[:200])
-            
-            if content_hash not in seen_content_hashes:
-                seen_content_hashes.add(content_hash)
-                unique_results.append(result)
-        
-        return unique_results

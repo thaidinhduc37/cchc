@@ -1,0 +1,23 @@
+{
+  "build_session": {
+    "start_time": "2025-07-07T14:42:53.302315",
+    "approach": "Legal Article Extraction + DOCX Q&A",
+    "domain": "xuatnhapcanh",
+    "embedding_model": "huyydangg/DEk21_hcmute_embedding",
+    "end_time": "2025-07-07T14:43:35.706796",
+    "duration_seconds": 42.404481,
+    "success": true
+  },
+  "processing": {
+    "files_processed": [],
+    "content_summary": {}
+  },
+  "build_stats": {
+    "start_time": "2025-07-07 14:42:53.303351",
+    "domain": "xuatnhapcanh",
+    "files_processed": 2,
+    "total_chunks": 339,
+    "build_time": 42.40095567703247
+  },
+  "errors": []
+}

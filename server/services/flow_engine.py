@@ -1,6 +1,4 @@
-# Copy toàn bộ nội dung này và REPLACE file services/flow_engine.py
-
-# services/flow_engine.py - Complete version với global instance
+# services/flow_engine.py - FIXED: Higher jump threshold only
 
 import json
 import logging
@@ -27,7 +25,7 @@ class FlowEngine:
         return user_id in self.user_progress
 
     def handle_user_input(self, user_id, message):
-        """Xử lý input của user trong flow - ENHANCED"""
+        """Xử lý input của user trong flow - UNCHANGED"""
         message = message.lower().strip()
 
         # Commands xử lý cơ bản
@@ -60,7 +58,7 @@ class FlowEngine:
         }
 
     def jump_to_step_by_number(self, user_id, message):
-        """Nhảy đến step theo số"""
+        """Nhảy đến step theo số - UNCHANGED"""
         try:
             # Tìm số trong message
             import re
@@ -95,7 +93,7 @@ class FlowEngine:
 
     def jump_to_step_by_description(self, user_id, message):
         """
-        ENHANCED: Nhảy đến step khi user nhắn gần giống description/name
+        FIXED: Nhảy đến step với HIGHER THRESHOLD để ít aggressive hơn
         """
         state = self.user_progress.get(user_id)
         if not state:
@@ -160,7 +158,8 @@ class FlowEngine:
             max_score = max(scores) if scores else 0
             final_score = max_score + keyword_bonus
             
-            if final_score >= 50:  # Threshold thấp hơn để dễ match
+            # FIXED: Tăng threshold từ 50 → 75
+            if final_score >= 75:  
                 best_matches.append({
                     'step_index': step_index,
                     'step': step,
@@ -172,7 +171,8 @@ class FlowEngine:
         # Sort theo score và lấy match tốt nhất
         best_matches.sort(key=lambda x: x['score'], reverse=True)
         
-        if best_matches and best_matches[0]['score'] >= 60:  # Chỉ accept score tốt
+        # FIXED: Tăng threshold từ 60 → 80
+        if best_matches and best_matches[0]['score'] >= 80:  
             best_match = best_matches[0]
             
             old_step = self.user_progress[user_id]["step_index"]
@@ -186,10 +186,14 @@ class FlowEngine:
             result["jump_message"] = f"🎯 Tôi hiểu bạn muốn đến bước {new_step}: {best_match['name'][:50]}..."
             return result
         
+        # Log để debug
+        if best_matches:
+            logger.info(f"❌ Best match score {best_matches[0]['score']:.1f} below threshold 80")
+        
         return None
 
     def start_flow(self, user_id, flow_id):
-        """Bắt đầu flow mới"""
+        """Bắt đầu flow mới - UNCHANGED"""
         if flow_id not in self.flows:
             return {"error": f"Flow ID '{flow_id}' không tồn tại."}
         
@@ -203,7 +207,7 @@ class FlowEngine:
         return self.get_current_step(user_id)
 
     def get_current_step(self, user_id):
-        """Lấy step hiện tại"""
+        """Lấy step hiện tại - UNCHANGED"""
         state = self.user_progress.get(user_id)
         if not state:
             return {"error": "User chưa bắt đầu flow nào."}
@@ -224,7 +228,7 @@ class FlowEngine:
         }
 
     def next_step(self, user_id):
-        """Chuyển sang bước tiếp theo"""
+        """Chuyển sang bước tiếp theo - UNCHANGED"""
         if user_id not in self.user_progress:
             return {"error": "User chưa bắt đầu flow nào."}
 
@@ -241,7 +245,7 @@ class FlowEngine:
         return self.get_current_step(user_id)
 
     def previous_step(self, user_id):
-        """Quay lại bước trước"""
+        """Quay lại bước trước - UNCHANGED"""
         if user_id not in self.user_progress:
             return {"error": "User chưa bắt đầu flow nào."}
 
@@ -254,7 +258,7 @@ class FlowEngine:
         return self.get_current_step(user_id)
 
     def reset(self, user_id):
-        """Reset flow cho user"""
+        """Reset flow cho user - UNCHANGED"""
         if user_id in self.user_progress:
             flow_id = self.user_progress[user_id].get("flow_id", "unknown")
             del self.user_progress[user_id]
@@ -265,7 +269,7 @@ class FlowEngine:
             "message": "🔄 Đã kết thúc hướng dẫn. Bạn có thể bắt đầu lại bất cứ lúc nào!"
         }
 
-# ===== GLOBAL INSTANCE =====
+# ===== GLOBAL INSTANCE - UNCHANGED =====
 # Tạo instance global để import
 try:
     flow_engine = FlowEngine("dataset/xuatnhapcanh/flow.json")

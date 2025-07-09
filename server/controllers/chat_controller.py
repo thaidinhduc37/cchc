@@ -1,4 +1,4 @@
-# controllers/chat_controller.py - FIXED with Guide Data Support
+# controllers/chat_controller.py - FIXED: Add Context Support Only
 
 from services.flow_engine import FlowEngine
 from services.unified_processor import process_user_query
@@ -9,10 +9,12 @@ import os
 import pickle
 
 logger = logging.getLogger(__name__)
+from services.speech_services.text_to_speech import TextToSpeech
 
 class ChatController:
     def __init__(self):
-        # Tạo instance FlowEngine trong constructor
+        self.tts = TextToSpeech()
+        # Tạo instance FlowEngine trong constructor - UNCHANGED
         try:
             self.flow_engine = FlowEngine("dataset/xuatnhapcanh/flow.json")
             logger.info("✅ Flow engine initialized in ChatController")
@@ -26,7 +28,7 @@ class ChatController:
         self._load_sessions()
 
     def _load_question_tree(self):
-        """Load question tree từ flow.json"""
+        """Load question tree từ flow.json - UNCHANGED"""
         try:
             with open("dataset/xuatnhapcanh/flow.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -42,7 +44,7 @@ class ChatController:
             self.flows_info = {}
 
     def _load_sessions(self):
-        """Load user sessions từ file"""
+        """Load user sessions từ file - UNCHANGED"""
         try:
             if os.path.exists(self.session_file):
                 with open(self.session_file, 'rb') as f:
@@ -56,7 +58,7 @@ class ChatController:
             self.user_sessions = {}
 
     def _save_sessions(self):
-        """Save user sessions to file"""
+        """Save user sessions to file - UNCHANGED"""
         try:
             os.makedirs("data", exist_ok=True)
             with open(self.session_file, 'wb') as f:
@@ -66,29 +68,63 @@ class ChatController:
             logger.error(f"❌ Error saving sessions: {e}")
 
     def _normalize_user_id(self, user_id: str) -> str:
-        """Normalize user ID - tạo consistent ID từ IP hoặc browser fingerprint"""
-        # Pattern: user_timestamp -> lấy 10 ký tự đầu của timestamp
+        """Normalize user ID - UNCHANGED"""
         if user_id.startswith("user_") and len(user_id) > 10:
-            # Lấy 10 ký tự đầu từ timestamp để tạo consistent ID
-            # VD: user_1748934488511 -> user_1748934488
-            timestamp_part = user_id[5:]  # Bỏ "user_"
+            timestamp_part = user_id[5:]
             if timestamp_part.isdigit() and len(timestamp_part) >= 10:
                 base_id = timestamp_part[:10]
                 normalized = f"user_{base_id}"
                 logger.debug(f"🔧 Normalized {user_id} -> {normalized}")
                 return normalized
         
-        # Fallback: giữ nguyên
         return user_id
 
-    def handle_chat(self, user_id: str, message: str, domain: str = None) -> dict:
-        """Xử lý chat - FIXED với session persistence và DEBUG"""
+    # ===== NEW: CONTEXT MANAGEMENT =====
+    def _get_recent_context(self, user_id: str) -> str:
+        """Get recent context from last 2-3 messages"""
+        session = self.user_sessions.get(user_id, {})
+        history = session.get("history", [])
         
-        # NORMALIZE USER ID để duy trì session
+        if len(history) >= 2:
+            # Get last 2 messages for context
+            recent = [h["user"] for h in history[-2:]]
+            context = " ".join(recent)
+            logger.debug(f"📝 Context for {user_id}: '{context[:50]}...'")
+            return context
+        
+        return ""
+
+    def _save_to_history(self, user_id: str, message: str):
+        """Save message to user history"""
+        if user_id not in self.user_sessions:
+            return
+            
+        session = self.user_sessions[user_id]
+        
+        # Ensure history exists
+        if "history" not in session:
+            session["history"] = []
+        
+        # Add current message
+        session["history"].append({
+            "user": message,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Keep only last 5 messages to avoid memory bloat
+        if len(session["history"]) > 5:
+            session["history"] = session["history"][-5:]
+        
+        logger.debug(f"💾 Saved to history for {user_id}: '{message[:30]}...'")
+
+    def handle_chat(self, user_id: str, message: str, domain: str = None) -> dict:
+        """Xử lý chat - ENHANCED: Show Unified + Flow prompt"""
+        
+        # UNCHANGED: Normalize user ID
         normalized_user_id = self._normalize_user_id(user_id)
         logger.info(f"🔍 Original user_id: {user_id} -> Normalized: {normalized_user_id}")
         
-        # Khởi tạo session nếu chưa có
+        # UNCHANGED: Initialize session if needed
         if normalized_user_id not in self.user_sessions:
             self.user_sessions[normalized_user_id] = {
                 "mode": "normal",
@@ -108,62 +144,53 @@ class ChatController:
         message_cleaned = message.strip()
         message_lower = message_cleaned.lower()
         
-        # Lưu lịch sử
-        session["history"].append({
-            "user": message_cleaned, 
-            "timestamp": datetime.now().isoformat()
-        })
+        # NEW: Get context BEFORE saving current message
+        recent_context = self._get_recent_context(normalized_user_id)
+        
+        # NEW: Save current message to history
+        self._save_to_history(normalized_user_id, message_cleaned)
 
-        # ===== CRITICAL DEBUG LOGGING =====
+        # UNCHANGED: Detailed state logging
         logger.info(f"🔍 DETAILED STATE CHECK for user {normalized_user_id}:")
         logger.info(f"   📋 Session mode: {session['mode']}")
         logger.info(f"   ❓ Current question ID: {session.get('current_question_id')}")
         logger.info(f"   📝 Answers count: {len(session.get('current_answers', []))}")
         logger.info(f"   🔄 Flow engine state: {self.flow_engine.is_in_flow(normalized_user_id)}")
         logger.info(f"   💬 Message: '{message_cleaned}'")
-        logger.info(f"   🕐 Last active: {session.get('last_active')}")
+        logger.info(f"   📄 Context: '{recent_context[:50]}...'")
 
-        # ===== PRIORITY 1: XỬ LÝ FLOW ĐANG CHẠY (STRICT MODE) ===
+        # UNCHANGED: Handle active flow
         if self.flow_engine.is_in_flow(normalized_user_id):
             logger.info(f"🔄 User {normalized_user_id} in active step flow")
             result = self._handle_active_flow_strict(normalized_user_id, message_cleaned, message_lower)
             self._save_sessions()
             return result
 
-        # ===== PRIORITY 2: XỬ LÝ QUESTION FLOW (STRICT MODE) ===
+        # UNCHANGED: Handle question flow
         if session["mode"] == "question_flow":
             logger.info(f"❓ ENTERING question flow handler for user {normalized_user_id}")
-            logger.info(f"❓ Current question: {session.get('current_question_id')}")
-            logger.info(f"❓ Processing message: '{message_cleaned}'")
             result = self._handle_question_flow_strict(normalized_user_id, message_cleaned, session)
             self._save_sessions()
             return result
 
-        # ===== PRIORITY 3: KHỞI ĐỘNG FLOW ===
+        # UNCHANGED: Start flow
         if message_lower == "hướng dẫn quy trình":
             logger.info(f"🚀 Starting question flow for user {normalized_user_id}")
             result = self._start_question_flow(normalized_user_id, session)
             self._save_sessions()
             return result
 
-        # Detect flow intent
+        # ENHANCED: Flow request with Unified content
         if self._is_flow_request(message_lower):
-            return {
-                "reply": "📌 Bạn muốn được hướng dẫn từng bước thực hiện thủ tục không?",
-                "source": "chatbot",
-                "show_flow_button": True,
-                "button_label": "Hướng dẫn quy trình",
-                "type": "guide_prompt"
-            }
+            logger.info(f"🔍 Enhanced flow request detected for: '{message_cleaned}'")
+            result = self._handle_enhanced_flow_request(normalized_user_id, message_cleaned, recent_context, domain)
+            self._save_sessions()
+            return result
 
-        # ===== CRITICAL: NẾU ĐẾN ĐÂY VỚI FLOW OPTION = LỖI =====
+        # UNCHANGED: Check for flow options error
         flow_options = ["tôi đã rõ", "cấp hộ chiếu lần đầu", "cấp lại hộ chiếu"]
         if any(opt in message_lower for opt in flow_options):
             logger.error(f"🚨 CRITICAL: Flow option '{message_cleaned}' reached normal processing!")
-            logger.error(f"🚨 Session state: {session}")
-            logger.error(f"🚨 This should NOT happen - check session persistence!")
-            
-            # Emergency fallback
             return {
                 "reply": f"❌ Có lỗi hệ thống với option '{message_cleaned}'. Vui lòng thử lại 'Hướng dẫn quy trình'.",
                 "source": "error",
@@ -175,10 +202,12 @@ class ChatController:
                 }
             }
 
-        # ===== PRIORITY 4: XỬ LÝ THÔNG THƯỜNG ===
+        # MODIFIED: Call UnifiedProcessor with context
         logger.info(f"💬 Normal processing for user {normalized_user_id}: {message_cleaned}")
         domain = domain or "xuatnhapcanh"
-        result = process_user_query(message_cleaned, normalized_user_id, domain)
+        
+        # NEW: Pass context to UnifiedProcessor
+        result = process_user_query(message_cleaned, normalized_user_id, domain, recent_context)
         
         self._save_sessions()
         
@@ -190,8 +219,101 @@ class ChatController:
             "domain": domain
         }
 
+    def _handle_enhanced_flow_request(self, user_id: str, message: str, context: str, domain: str) -> dict:
+        """ENHANCED: Handle flow request with Unified content"""
+        try:
+            # 1. Extract procedure and detect domain
+            procedure_name = self._extract_procedure_from_message(message, context)
+            detected_domain = domain or self._detect_domain_from_procedure(procedure_name)
+            
+            logger.info(f"🔍 Enhanced flow request:")
+            logger.info(f"   Message: '{message}'")
+            logger.info(f"   Procedure: '{procedure_name}'")
+            logger.info(f"   Domain: '{detected_domain}'")
+            
+            # 2. Check if domain has flow
+            flow_path = f"dataset/{detected_domain}/flow.json"
+            has_flow = os.path.exists(flow_path)
+            logger.info(f"   Flow exists: {has_flow} (path: {flow_path})")
+            
+            # 3. Get Unified content first
+            logger.info("📋 Getting Unified content...")
+            unified_result = process_user_query(message, user_id, detected_domain, context)
+            unified_content = unified_result.get('reply') or unified_result.get('text', '')
+            
+            # 4. Build response based on flow availability
+            if has_flow and detected_domain != "unknown":
+                # Has flow: Show Unified + Flow prompt + Button
+                logger.info("✅ Has flow - showing Unified + Flow prompt")
+                
+                if unified_content and len(unified_content.strip()) > 10:
+                    # Has meaningful Unified content
+                    combined_reply = f"{unified_content}\n\n📌 Bạn muốn được hướng dẫn từng bước thực hiện {procedure_name} không?"
+                else:
+                    # No meaningful Unified content - use default
+                    combined_reply = f"📌 Bạn muốn được hướng dẫn từng bước thực hiện {procedure_name} không?"
+                
+                return {
+                    "reply": combined_reply,
+                    "source": "enhanced_flow_request",
+                    "show_flow_button": True,
+                    "button_label": "Hướng dẫn quy trình",
+                    "type": "guide_prompt",
+                    "metadata": {
+                        "procedure": procedure_name,
+                        "domain": detected_domain,
+                        "has_unified_content": bool(unified_content and len(unified_content.strip()) > 10),
+                        "unified_source": unified_result.get("source", "unknown")
+                    }
+                }
+            
+            else:
+                # No flow: Just show Unified content
+                logger.info("❌ No flow - showing only Unified content")
+                
+                if unified_content and len(unified_content.strip()) > 10:
+                    # Has Unified content - return it
+                    return {
+                        "reply": unified_content,
+                        "source": unified_result.get("source", "unified"),
+                        "type": "answer",
+                        "metadata": {
+                            **unified_result.get("metadata", {}),
+                            "procedure": procedure_name,
+                            "domain": detected_domain,
+                            "flow_available": False
+                        }
+                    }
+                else:
+                    # No Unified content either - fallback
+                    return {
+                        "reply": f"Hiện tại hệ thống đang cập nhật thông tin hướng dẫn về {procedure_name}. Bạn vui lòng liên hệ cán bộ tiếp nhận để được hỗ trợ.",
+                        "source": "no_data_available",
+                        "type": "fallback",
+                        "metadata": {
+                            "procedure": procedure_name,
+                            "domain": detected_domain,
+                            "flow_available": False,
+                            "unified_available": False
+                        }
+                    }
+        
+        except Exception as e:
+            logger.error(f"❌ Enhanced flow request failed: {e}")
+            # Fallback to old behavior
+            procedure_name = self._extract_procedure_from_message(message, context)
+            return {
+                "reply": f"📌 Bạn muốn được hướng dẫn từng bước thực hiện {procedure_name} không?",
+                "source": "fallback_flow_request",
+                "show_flow_button": True,
+                "button_label": "Hướng dẫn quy trình",
+                "type": "guide_prompt"
+            }
+
+
+    # ===== ALL OTHER METHODS UNCHANGED =====
     def _handle_question_flow_strict(self, user_id: str, message: str, session: dict) -> dict:
-        """Xử lý STRICT question flow - ENHANCED LOGGING"""
+        """Xử lý STRICT question flow - UNCHANGED"""
         
         logger.info(f"🔄 Question flow handler for user {user_id}")
         logger.info(f"📋 Current question: {session.get('current_question_id')}")
@@ -264,12 +386,24 @@ class ChatController:
             logger.info(f"➡️ Moving to next question: {next_item['id']}")
             session["current_question_id"] = next_item["id"]
             options = [opt["label"] for opt in next_item.get("options", [])]
-            return {
+            
+            # NEW: Support image in questions
+            response = {
                 "reply": next_item["question"],
                 "source": "chatbot",
                 "options": options + ["Thoát hướng dẫn"],
                 "type": "question"
             }
+            
+            # Add image if exists
+            if "image" in next_item and next_item["image"]:
+                if next_item["image"].startswith("dataset/"):
+                    base_url = "http://localhost:8000"
+                    response["guide_image"] = f"{base_url}/static/{next_item['image']}"
+                else:
+                    response["guide_image"] = next_item["image"]
+            
+            return response
         
         elif isinstance(next_item, dict) and next_item.get("type") == "flow":
             # Chuyển sang step flow
@@ -287,7 +421,7 @@ class ChatController:
             }
 
     def _get_next_question_or_flow(self, current_answers: list):
-        """Tìm câu hỏi tiếp theo hoặc flow - ENHANCED DEBUGGING"""
+        """Tìm câu hỏi tiếp theo hoặc flow - UNCHANGED"""
         if not current_answers:
             return self.questions.get("start")
         
@@ -332,9 +466,8 @@ class ChatController:
         logger.error(f"❌ No matching option found for '{selected_option}'")
         return None
 
-    # Các methods khác giữ nguyên...
     def _start_question_flow(self, user_id: str, session: dict) -> dict:
-        """Bắt đầu question flow"""
+        """Bắt đầu question flow - UNCHANGED"""
         logger.info(f"🚀 Starting question flow for user {user_id}")
         
         session["mode"] = "question_flow"
@@ -345,12 +478,24 @@ class ChatController:
         if start_question:
             options = [opt["label"] for opt in start_question.get("options", [])]
             logger.info(f"✅ Returning start question with options: {options}")
-            return {
+            
+            # NEW: Support image in start question
+            response = {
                 "reply": start_question["question"],
                 "source": "chatbot",
                 "options": options + ["Thoát hướng dẫn"],
                 "type": "question"
             }
+            
+            # Add image if exists
+            if "image" in start_question and start_question["image"]:
+                if start_question["image"].startswith("dataset/"):
+                    base_url = "http://localhost:8000"
+                    response["guide_image"] = f"{base_url}/static/{start_question['image']}"
+                else:
+                    response["guide_image"] = start_question["image"]
+            
+            return response
         
         logger.error("❌ Start question not found!")
         return {
@@ -360,7 +505,7 @@ class ChatController:
         }
 
     def _handle_active_flow_strict(self, user_id: str, message: str, message_lower: str) -> dict:
-        """Xử lý STRICT khi đang trong step flow - CHỈ XỬ LÝ FLOW"""
+        """Xử lý STRICT khi đang trong step flow - UNCHANGED"""
         
         # CHỈ CHO PHÉP THOÁT KHI NHẮN ĐÚNG LỆNH
         exit_commands = ["thoát hướng dẫn", "thoát quy trình", "kết thúc hướng dẫn", "exit flow"]
@@ -382,10 +527,8 @@ class ChatController:
         # Xử lý kết quả flow
         return self._format_flow_response(user_id, flow_result)
 
-    # Chỉ cần REPLACE method _format_flow_response trong file chat_controller.py
-
     def _format_flow_response(self, user_id: str, flow_result: dict) -> dict:
-        """Format flow response với đầy đủ guide data cho frontend"""
+        """Format flow response với TTS support"""
         
         # GET FLOW INFO
         flow_id = self.flow_engine.user_progress.get(user_id, {}).get("flow_id")
@@ -421,16 +564,24 @@ class ChatController:
                 "wait_for_user": step_data.get("wait_for_user", True)
             }
             
+            # ===== TTS PROCESSING =====
+            step_type = step_data.get("type", "say")
+            step_tts = step_data.get("tts")
+            
+            if step_type == "say" and step_tts:
+                if self.tts.is_available():
+                    self.tts.speak_async(step_tts)
+                guide_data["tts_text"] = step_tts
+                guide_data["should_speak"] = True
+            else:
+                guide_data["should_speak"] = False
+            
             # Media and resources
             step_image = step_data.get("image")
-            
             if step_image:
-                # Convert relative path to full URL
                 if step_image.startswith("dataset/"):
-                    # TODO: Make base_url configurable via environment variable
                     base_url = "http://localhost:8000"
                     guide_data["guide_image"] = f"{base_url}/static/{step_image}"
-                   
                 else:
                     guide_data["guide_image"] = step_image
             
@@ -438,11 +589,6 @@ class ChatController:
             step_link = step_data.get("link")
             if step_link:
                 guide_data["external_link"] = step_link
-            
-            # Text-to-speech support
-            step_tts = step_data.get("tts")
-            if step_tts:
-                guide_data["tts_text"] = step_tts
             
             # Navigation info
             guide_data["navigation"] = {
@@ -465,9 +611,9 @@ class ChatController:
                 "type": "step",
                 "buttons": ["Tiếp tục", "Quay lại", "Thoát hướng dẫn"],
                 "step_mode": True,
-                "current_step": int(current_step_num) if current_step_num else None,  # ✅ THÊM DÒNG NÀY
-                "guide_image": guide_data.get("guide_image"), 
-                "step_info": guide_data.get("step_info"), # ✅ THÊM DÒNG NÀY
+                "current_step": int(current_step_num) if current_step_num else None,
+                "tts_text": guide_data.get("tts_text"),
+                "should_speak": guide_data.get("should_speak", False),
                 **guide_data
             }
         
@@ -482,7 +628,8 @@ class ChatController:
                 "reply": flow_result.get("message", "✅ Bạn đã hoàn tất hướng dẫn!"),
                 "source": "flow",
                 "type": "completed",
-                "flow_completed": True
+                "flow_completed": True,
+                "should_speak": False
             }
         
         # Nếu có lỗi flow
@@ -490,7 +637,8 @@ class ChatController:
             return {
                 "reply": f"❌ {flow_result['error']}",
                 "source": "flow",
-                "type": "error"
+                "type": "error",
+                "should_speak": False
             }
         
         # Hiển thị step thông thường
@@ -501,10 +649,10 @@ class ChatController:
                 "type": "step",
                 "buttons": ["Tiếp tục", "Quay lại", "Thoát hướng dẫn"],
                 "step_mode": True,
-                "current_step": int(current_step_num) if current_step_num else None,  # ✅ THÊM DÒNG NÀY
-                "guide_image": guide_data.get("guide_image"),
-                "step_info": guide_data.get("step_info"),  # ✅ THÊM DÒNG NÀY
-                **guide_data  # Include all guide data
+                "current_step": int(current_step_num) if current_step_num else None,
+                "tts_text": guide_data.get("tts_text"),
+                "should_speak": guide_data.get("should_speak", False),
+                **guide_data
             }
         
         # Nếu không hiểu lệnh - CHẶN HỎI KHÁC
@@ -513,11 +661,12 @@ class ChatController:
             "source": "flow",
             "type": "flow_locked",
             "buttons": ["Tiếp tục", "Quay lại", "Thoát hướng dẫn"],
-            **guide_data  # Include guide data even for locked state
+            "should_speak": False,
+            **guide_data
         }
 
     def _start_step_flow(self, user_id: str, flow_id: str) -> dict:
-        """Bắt đầu step flow"""
+        """Bắt đầu step flow - UNCHANGED"""
         flow_info = self.flows_info.get(flow_id, {})
         steps = flow_info.get("steps", {})
         
@@ -543,16 +692,45 @@ class ChatController:
         # Format step response
         return self._format_flow_response(user_id, result)
 
+    def _detect_domain_from_procedure(self, procedure_name: str) -> str:
+        """Detect domain from procedure name"""
+        p = procedure_name.lower()
+        if any(kw in p for kw in ["hộ chiếu", "xuất cảnh", "nhập cảnh", "visa"]): return "xuatnhapcanh"
+        elif any(kw in p for kw in ["căn cước", "cccd", "cmnd"]): return "cancuoc"
+        elif any(kw in p for kw in ["thường trú", "tạm trú", "cư trú"]): return "cutru"
+        else: return "unknown"
+
+    def _extract_procedure_from_message(self, message: str, context: str = "") -> str:
+        """Extract procedure name from message"""
+        combined = f"{context} {message}".lower()
+        
+        if "hộ chiếu" in combined: return "cấp hộ chiếu"
+        elif "căn cước" in combined: return "cấp căn cước"  
+        elif "thường trú" in combined: return "đăng ký thường trú"
+        elif "tạm trú" in combined: return "đăng ký tạm trú"
+        else: return "thủ tục"
+
     def _is_flow_request(self, message: str) -> bool:
-        """Kiểm tra có phải yêu cầu hướng dẫn không"""
+        """Detect flow requests - ENHANCED"""
         flow_keywords = [
-            "hướng dẫn", "quy trình", "trình tự", "các bước", "thủ tục",
-            "hướng dẫn làm", "hướng dẫn thủ tục"
+            "hướng dẫn", "quy trình", "trình tự", "các bước", 
+            "hướng dẫn làm", "hướng dẫn thủ tục", "cách làm", "làm như thế nào",
+            "thủ tục như thế nào", "quy trình như thế nào"
         ]
-        return any(kw in message for kw in flow_keywords)
+        
+        # Must have flow keyword + procedure context
+        has_flow_keyword = any(kw in message for kw in flow_keywords)
+        has_procedure_context = any(proc in message for proc in [
+            "hộ chiếu", "visa", "căn cước", "cccd", "thường trú", "tạm trú", 
+            "xuất cảnh", "nhập cảnh", "cấp", "làm", "đăng ký"
+        ])
+        
+        result = has_flow_keyword and has_procedure_context
+        logger.debug(f"🔍 Flow request check: '{message}' → {result} (keyword: {has_flow_keyword}, context: {has_procedure_context})")
+        return result
 
     def get_user_session_info(self, user_id: str) -> dict:
-        """Lấy thông tin session của user - DEBUG METHOD"""
+        """Lấy thông tin session của user - DEBUG METHOD - UNCHANGED"""
         normalized_id = self._normalize_user_id(user_id)
         session = self.user_sessions.get(normalized_id, {})
         flow_state = self.flow_engine.user_progress.get(normalized_id, {})
@@ -571,7 +749,7 @@ class ChatController:
         }
 
     def cleanup_old_sessions(self, hours=24):
-        """Cleanup old sessions"""
+        """Cleanup old sessions - UNCHANGED"""
         cutoff = datetime.now().timestamp() - (hours * 3600)
         to_remove = []
         

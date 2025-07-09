@@ -1,56 +1,204 @@
 {
-    "entries": [
+  "qa_collection": {
+    "metadata": {
+      "version": "1.0",
+      "domain": "xuatnhapcanh",
+      "source": "BCA Q&A + Luật 2019",
+      "last_updated": "2024-01-15",
+      "total_entries": 15
+    },
+    "qa_entries": [
       {
-        "field": "Cấp, quản lý thẻ Căn cước",
-        "procedure": "Cấp thẻ Căn cước cho người từ đủ 14 tuổi trở lên",
-        "keywords": ["đăng ký căn cước", "căn cước", "đủ 14 tuổi"],
-        "responses": [
-          "1. Bạn có thể nộp hồ sơ cấp mới Căn cước tại đây: <a href='https://example.com/cancuoc' target='_blank'>Xem chi tiết</a>",
-          "2. Hồ sơ bao gồm: CCCD cũ, giấy khai sinh (nếu chưa có CCCD trước đây).",
-          "3. Thời gian xử lý: 7-15 ngày làm việc"
-        ]
-      },
-      {
-        "field": "Cấp, quản lý thẻ Căn cước",
-        "procedure": "Cấp thẻ Căn cước cho người dưới 14 tuổi",
-        "keywords": [
-          "đăng ký căn cước",
-          "căn cước",
-          "dưới 14 tuổi",
-          "trẻ em",
-          "cấp căn cước cho trẻ"
+        "id": "passport_basic_procedure_001",
+        "field": "Thủ tục hộ chiếu cơ bản",
+        "procedure": "Thủ tục làm hộ chiếu phổ thông",
+        "keywords": ["làm hộ chiếu", "thủ tục hộ chiếu", "quy trình hộ chiếu", "hộ chiếu phổ thông"],
+        "common_questions": [
+          "Thủ tục làm hộ chiếu như thế nào?",
+          "Làm hộ chiếu phổ thông thế nào?",
+          "Quy trình xin hộ chiếu ra sao?",
+          "Muốn có hộ chiếu phải làm gì?"
         ],
+        "legal_basis": ["Điều 15 Luật xuất cảnh, nhập cảnh 2019", "Điều 16 Luật xuất cảnh, nhập cảnh 2019"],
         "responses": [
-          "1. Bạn có thể nộp hồ sơ cấp mới Căn cước tại đây: <a href='https://example.com/cancuoc' target='_blank'>Xem chi tiết</a>",
-          "2. Hồ sơ bao gồm: giấy khai sinh.",
-          "3. Thời gian xử lý: 7-15 ngày làm việc"
+          "1. Điều kiện: [Bạn điền chi tiết điều kiện cấp hộ chiếu]",
+          "2. Hồ sơ: [Bạn điền danh sách hồ sơ cần thiết]", 
+          "3. Nơi nộp: [Bạn điền địa điểm và cách thức nộp]",
+          "4. Thời gian: [Bạn điền thời gian xử lý]",
+          "5. Lệ phí: [Bạn điền mức phí hiện hành]"
         ]
       },
       {
-        "field": "Cấp, quản lý thẻ Căn cước",
-        "procedure": "Đổi thông tin trên Căn cước",
-        "keywords": [
-          "đổi thông tin căn cước",
-          "cập nhật căn cước",
-          "sửa thông tin căn cước"
+        "id": "passport_documents_002", 
+        "field": "Hồ sơ hộ chiếu",
+        "procedure": "Hồ sơ cần thiết để làm hộ chiếu",
+        "keywords": ["hồ sơ hộ chiếu", "giấy tờ làm hộ chiếu", "thành phần hồ sơ", "cần mang gì"],
+        "common_questions": [
+          "Hồ sơ hộ chiếu bao gồm những gì?",
+          "Làm hộ chiếu cần mang theo giấy tờ gì?",
+          "Cần chuẩn bị những giấy tờ nào để làm hộ chiếu?",
+          "Thành phần hồ sơ làm hộ chiếu gồm có gì?"
         ],
+        "legal_basis": ["Điều 16 Luật xuất cảnh, nhập cảnh 2019"],
         "responses": [
-          "Bạn cần đến cơ quan Công an cấp huyện hoặc Trung tâm hành chính công để làm thủ tục đổi thông tin trên Căn cước.",
-          "Hồ sơ cần chuẩn bị: Căn cước công dân cũ, giấy tờ chứng minh thông tin cần thay đổi (ví dụ: Giấy khai sinh, giấy chứng nhận kết hôn, v.v.).",
-          "Thời gian xử lý: 7-15 ngày làm việc."
+          "1. Tờ khai: [Bạn điền chi tiết về tờ khai đề nghị cấp hộ chiếu]",
+          "2. Ảnh: [Bạn điền yêu cầu về ảnh 4x6cm]",
+          "3. Giấy tờ tùy thân: [Bạn điền về CMND/CCCD cần xuất trình]",
+          "4. Giấy tờ bổ sung: [Bạn điền các giấy tờ khác nếu có]"
         ]
       },
       {
-        "field": "Cấp, quản lý thẻ Căn cước",
-        "procedure": "Cấp lại thẻ Căn cước",
-        "keywords": ["cấp lại căn cước", "làm lại căn cước", "mất căn cước"],
+        "id": "passport_children_under_14_003",
+        "field": "Hộ chiếu trẻ em",
+        "procedure": "Làm hộ chiếu cho trẻ em dưới 14 tuổi",
+        "keywords": ["trẻ em dưới 14 tuổi", "hộ chiếu trẻ em", "con nhỏ làm hộ chiếu", "bé làm hộ chiếu"],
+        "common_questions": [
+          "Làm hộ chiếu cho trẻ em dưới 14 tuổi thế nào?",
+          "Con tôi 5 tuổi làm hộ chiếu như thế nào?",
+          "Trẻ 10 tuổi có thể làm hộ chiếu không?",
+          "Bé 8 tuổi cần những giấy tờ gì để làm hộ chiếu?"
+        ],
+        "legal_basis": ["Điều 15 Luật xuất cảnh, nhập cảnh 2019", "Điều 16 Luật xuất cảnh, nhập cảnh 2019"],
         "responses": [
-          "Thủ tục câp lại Căn cước do mất:",
-          "1. Bạn có thể nộp hồ sơ cấp lại Căn cước tại đây: <a href='https://example.com/caplai-cancuoc' target='_blank'>Xem chi tiết</a>",
-          "2. Lưu ý: Khi làm lại thẻ Căn cước, bạn cần có giấy xác nhận mất CCCD từ công an phường/xã.",
-          "3. Thời gian xử lý: 7-15 ngày làm việc"
+          "1. Điều kiện: [Bạn điền điều kiện cho trẻ em dưới 14 tuổi]",
+          "2. Người đại diện: [Bạn điền về bố mẹ hoặc người giám hộ]",
+          "3. Hồ sơ: [Bạn điền hồ sơ đặc biệt cho trẻ em]",
+          "4. Thời hạn hộ chiếu: [Bạn điền thời hạn 5 năm cho trẻ em]"
+        ]
+      },
+      {
+        "id": "passport_temporary_residence_004",
+        "field": "Hộ chiếu cho người tạm trú",
+        "procedure": "Làm hộ chiếu khi đang tạm trú ở nơi khác",
+        "keywords": ["tạm trú", "ở nơi khác", "không phải nơi thường trú", "tạm trú làm hộ chiếu"],
+        "common_questions": [
+          "Đang tạm trú có làm được hộ chiếu không?",
+          "Ở nơi khác không phải quê nhà có làm hộ chiếu được không?",
+          "Tạm trú tại Hà Nội có làm hộ chiếu được không?",
+          "Làm hộ chiếu khi đang tạm trú cần thêm giấy tờ gì?"
+        ],
+        "legal_basis": ["Điều 16 Luật xuất cảnh, nhập cảnh 2019"],
+        "responses": [
+          "1. Điều kiện: [Bạn điền điều kiện làm hộ chiếu tại nơi tạm trú]",
+          "2. Giấy tờ bổ sung: [Bạn điền về sổ tạm trú hoặc giấy tờ chứng minh]",
+          "3. Nơi nộp: [Bạn điền nơi có thể nộp hồ sơ]",
+          "4. Lưu ý: [Bạn điền các lưu ý đặc biệt]"
+        ]
+      },
+      {
+        "id": "travel_purpose_usa_005",
+        "field": "Đi Mỹ",
+        "procedure": "Chuẩn bị đi Mỹ du lịch/học tập/lao động",
+        "keywords": ["đi Mỹ", "du lịch Mỹ", "học tập Mỹ", "lao động Mỹ", "visa Mỹ"],
+        "common_questions": [
+          "Đi Mỹ du lịch cần chuẩn bị gì?",
+          "Đi Mỹ học tập cần những giấy tờ gì?",
+          "Đi Mỹ làm việc cần visa gì?",
+          "Chuẩn bị đi Mỹ cần làm những thủ tục nào?"
+        ],
+        "legal_basis": ["Quy định của Mỹ về visa", "Thỏa thuận quốc tế"],
+        "responses": [
+          "1. Hộ chiếu: [Bạn điền yêu cầu về hộ chiếu còn hạn]",
+          "2. Visa Mỹ: [Bạn điền về các loại visa B1/B2, F1, H1B...]",
+          "3. Giấy tờ bổ sung: [Bạn điền tài liệu theo mục đích]",
+          "4. Lưu ý: [Bạn điền các lưu ý quan trọng]"
+        ]
+      },
+      {
+        "id": "travel_purpose_japan_006",
+        "field": "Đi Nhật Bản", 
+        "procedure": "Chuẩn bị đi Nhật Bản du lịch/học tập/lao động",
+        "keywords": ["đi Nhật", "du lịch Nhật Bản", "học tập Nhật", "lao động Nhật", "visa Nhật"],
+        "common_questions": [
+          "Đi Nhật Bản du lịch cần chuẩn bị gì?",
+          "Đi Nhật học tập cần visa gì?",
+          "Đi Nhật làm việc cần những thủ tục nào?",
+          "Visa Nhật Bản có mấy loại?"
+        ],
+        "legal_basis": ["Quy định của Nhật Bản về visa", "Thỏa thuận Việt-Nhật"],
+        "responses": [
+          "1. Hộ chiếu: [Bạn điền yêu cầu hộ chiếu]",
+          "2. Visa Nhật: [Bạn điền các loại visa du lịch, học tập, lao động]",
+          "3. Tài liệu: [Bạn điền tài liệu cần thiết theo mục đích]",
+          "4. Thời gian: [Bạn điền thời gian xử lý visa]"
+        ]
+      },
+      {
+        "id": "travel_asean_no_visa_007",
+        "field": "Đi các nước ASEAN",
+        "procedure": "Du lịch các nước Đông Nam Á miễn visa",
+        "keywords": ["ASEAN", "miễn visa", "Thái Lan", "Singapore", "Malaysia", "Indonesia"],
+        "common_questions": [
+          "Đi Thái Lan có cần visa không?",
+          "Đi Singapore cần chuẩn bị gì?",
+          "Những nước nào miễn visa cho Việt Nam?",
+          "Đi Malaysia có cần xin visa không?"
+        ],
+        "legal_basis": ["Thỏa thuận ASEAN về miễn visa"],
+        "responses": [
+          "1. Hộ chiếu: [Bạn điền yêu cầu hộ chiếu còn hạn ít nhất 6 tháng]",
+          "2. Miễn visa: [Bạn điền danh sách nước miễn visa]",
+          "3. Thời gian lưu trú: [Bạn điền thời gian được phép]",
+          "4. Điều kiện: [Bạn điền các điều kiện khác]"
+        ]
+      },
+      {
+        "id": "passport_renewal_008",
+        "field": "Gia hạn/cấp lại hộ chiếu",
+        "procedure": "Gia hạn hoặc cấp lại hộ chiếu khi hết hạn/mất",
+        "keywords": ["gia hạn hộ chiếu", "cấp lại hộ chiếu", "hộ chiếu hết hạn", "mất hộ chiếu"],
+        "common_questions": [
+          "Hộ chiếu sắp hết hạn phải làm gì?",
+          "Gia hạn hộ chiếu như thế nào?",
+          "Mất hộ chiếu thì làm sao?",
+          "Cấp lại hộ chiếu cần những gì?"
+        ],
+        "legal_basis": ["Điều 17 Luật xuất cảnh, nhập cảnh 2019"],
+        "responses": [
+          "1. Trường hợp gia hạn: [Bạn điền khi nào được gia hạn]",
+          "2. Cấp lại: [Bạn điền trường hợp cấp lại]",
+          "3. Hồ sơ: [Bạn điền hồ sơ cần thiết]",
+          "4. Lệ phí: [Bạn điền mức phí gia hạn/cấp lại]"
+        ]
+      },
+      {
+        "id": "passport_emergency_abroad_009",
+        "field": "Tình huống khẩn cấp ở nước ngoài",
+        "procedure": "Xử lý khi mất hộ chiếu hoặc khẩn cấp ở nước ngoài",
+        "keywords": ["mất hộ chiếu nước ngoài", "khẩn cấp", "đại sứ quán", "lãnh sự quán"],
+        "common_questions": [
+          "Mất hộ chiếu ở nước ngoài phải làm gì?",
+          "Hộ chiếu hết hạn khi đang ở nước ngoài?",
+          "Liên hệ đại sứ quán như thế nào?",
+          "Giấy thông hành về nước là gì?"
+        ],
+        "legal_basis": ["Điều 18 Luật xuất cảnh, nhập cảnh 2019"],
+        "responses": [
+          "1. Hành động ngay: [Bạn điền việc cần làm ngay lập tức]",
+          "2. Liên hệ: [Bạn điền cách liên hệ đại sứ quán/lãnh sự quán]",
+          "3. Thủ tục: [Bạn điền thủ tục tại đại sứ quán]",
+          "4. Giấy thông hành: [Bạn điền về giấy thông hành tạm thời]"
+        ]
+      },
+      {
+        "id": "passport_special_cases_010",
+        "field": "Trường hợp đặc biệt",
+        "procedure": "Làm hộ chiếu trong các tình huống gia đình phức tạp",
+        "keywords": ["ly hôn", "mồ côi", "bố mẹ nuôi", "một mình", "ông bà"],
+        "common_questions": [
+          "Bố mẹ ly hôn thì ai làm hộ chiếu cho con?",
+          "Trẻ mồ côi làm hộ chiếu như thế nào?",
+          "Bố mẹ nuôi có quyền làm hộ chiếu không?",
+          "Chỉ có mẹ một mình có làm được hộ chiếu không?"
+        ],
+        "legal_basis": ["Điều 15, 16 Luật xuất cảnh, nhập cảnh 2019", "Luật Hôn nhân và Gia đình"],
+        "responses": [
+          "1. Quyền đại diện: [Bạn điền ai có quyền đại diện]",
+          "2. Giấy tờ chứng minh: [Bạn điền giấy tờ cần có]",
+          "3. Trường hợp đặc biệt: [Bạn điền xử lý từng trường hợp]",
+          "4. Thủ tục bổ sung: [Bạn điền thủ tục thêm nếu có]"
         ]
       }
     ]
   }
-  
+}

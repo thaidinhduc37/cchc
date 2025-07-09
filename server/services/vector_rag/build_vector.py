@@ -1,346 +1,549 @@
-# server/services/vector_rag/build_vector.py
+# server/services/vector_rag/build_vector.py - REWRITTEN FOR DOCX Q&A
 """
-Build Vector Store Script - CẬP NHẬT: Tương thích với logic mới
+🔨 VECTOR DATABASE BUILDER - Rewritten for DOCX Q&A Support
+✅ UPDATED: Clean build process với DOCX Q&A support
+✅ UPDATED: Sync với document processor mới (legal_document + qa_entry)
+✅ UPDATED: Sync với vector store mới (enhanced stats)
+🎯 APPROACH: Legal Article Extraction + DOCX Q&A Processing
 """
 import asyncio
+import argparse
 import logging
 import sys
+import os
+import json
+import time
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from services.vector_rag.rag_config import config, get_config_summary_enhanced
+from services.vector_rag.rag_config import config, configure_for_simple_mode
 from services.vector_rag.document_processor import DocumentProcessor
-from services.vector_rag.vector_store import VectorStore
 from services.vector_rag.embeddings import VietnameseEmbeddingModel
+from services.vector_rag.vector_store import VectorStore
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(f'build_vector_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
-    ]
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-class VectorStoreBuilder:
-    """CẬP NHẬT: Vector Store Builder với logic mới"""
+class BuildLogger:
+    """📝 Simple logging for build process"""
     
-    def __init__(self):
-        self.document_processor = DocumentProcessor()
+    def __init__(self, vector_store_path: str):
+        self.log_file = os.path.join(vector_store_path, "build_log.json")
+        self.build_start = datetime.now()
+        
+        self.log_data = {
+            'build_session': {
+                'start_time': self.build_start.isoformat(),
+                'approach': 'Legal Article Extraction + DOCX Q&A',
+                'domain': config.domain,
+                'embedding_model': config.embedding_model
+            },
+            'processing': {
+                'files_processed': [],
+                'content_summary': {}
+            },
+            'build_stats': {},
+            'errors': []
+        }
+        
+        os.makedirs(vector_store_path, exist_ok=True)
+        logger.info("📝 Build logger initialized")
+    
+    def log_error(self, error_type: str, message: str, details: Dict = None):
+        """Log error"""
+        error_info = {
+            'timestamp': datetime.now().isoformat(),
+            'error_type': error_type,
+            'message': message,
+            'details': details or {}
+        }
+        self.log_data['errors'].append(error_info)
+        logger.error(f"❌ {error_type}: {message}")
+    
+    def finalize_log(self, success: bool, final_stats: Dict):
+        """Finalize and save logs"""
+        self.log_data['build_session']['end_time'] = datetime.now().isoformat()
+        self.log_data['build_session']['duration_seconds'] = (
+            datetime.now() - self.build_start
+        ).total_seconds()
+        self.log_data['build_session']['success'] = success
+        self.log_data['build_stats'] = final_stats
+        
+        # Save JSON log
+        try:
+            with open(self.log_file, 'w', encoding='utf-8') as f:
+                json.dump(self.log_data, f, indent=2, ensure_ascii=False, default=str)
+            logger.info(f"📝 Build log saved: {self.log_file}")
+        except Exception as e:
+            logger.error(f"Failed to save build log: {e}")
+
+class RAGBuilder:
+    """🏗️ RAG Builder for Legal Chatbot - DOCX Q&A Support"""
+    
+    def __init__(self, domain: str = "xuatnhapcanh"):
+        self.domain = domain
         self.vector_store = VectorStore()
-        self.embedding_model = VietnameseEmbeddingModel()
+        self.document_processor = DocumentProcessor()
         
-        logger.info("🔧 VectorStoreBuilder initialized với logic mới")
+        # Initialize logger
+        self.logger = BuildLogger(config.vector_store_path)
         
-        # CẬP NHẬT: Log model info
-        stats = self.embedding_model.get_stats()
-        logger.info(f"📊 Embedding Model: {stats['model_name']}")
-        logger.info(f"   Dimension: {stats['dimension']}")
-        logger.info(f"   E5 prefixes: {stats.get('use_e5_prefixes', False)}")
-        logger.info(f"   Normalization: {stats.get('normalize_embeddings', False)}")
+        # Stats tracking
+        self.stats = {
+            'start_time': datetime.now(),
+            'domain': domain,
+            'files_processed': 0,
+            'total_chunks': 0,
+            'build_time': 0.0
+        }
+        
+        logger.info(f"🏗️ RAG Builder initialized for domain: {domain}")
+        logger.info(f"📁 Documents: {config.documents_path}")
+        logger.info(f"💾 Vector store: {config.vector_store_path}")
+        logger.info(f"🎯 Approach: Legal Article Extraction + DOCX Q&A")
     
     async def build(self, force_rebuild: bool = False) -> Dict[str, Any]:
-        """CẬP NHẬT: Build vector store với enhanced processing"""
+        """🚀 Build vector database with DOCX Q&A support"""
+        build_success = False
+        
         try:
-            start_time = datetime.now()
-            logger.info("🚀 Starting vector store build với logic mới...")
+            logger.info("🔨 Starting build process...")
+            start_time = time.time()
             
-            # Step 1: Check if rebuild needed
-            if not force_rebuild:
-                existing_stats = self.vector_store.get_stats()
-                if existing_stats['total_documents'] > 0:
-                    user_input = input(f"Vector store exists with {existing_stats['total_documents']} documents. Rebuild? (y/N): ")
-                    if user_input.lower() != 'y':
-                        logger.info("❌ Build cancelled by user")
-                        return {'success': False, 'message': 'Cancelled by user'}
-            
-            # Step 2: Initialize vector store
-            logger.info("🗑️ Clearing existing vector store...")
-            await self.vector_store.initialize(force_rebuild=True)
-            
-            # Step 3: CẬP NHẬT - Process documents với legal chunking
-            logger.info("📄 Processing documents với legal structure chunking...")
-            documents = self.document_processor.process_directory()
+            # STEP 1: Process documents
+            logger.info("📄 Processing documents...")
+            documents = self.document_processor.process_directory(config.documents_path)
             
             if not documents:
-                logger.error("❌ No documents found")
-                return {
-                    'success': False,
-                    'message': 'No documents found in directory',
-                    'directory': config.documents_path
-                }
+                error_msg = "No documents found - check paths and file formats (.docx)"
+                self.logger.log_error("NO_DOCUMENTS", error_msg)
+                raise Exception(error_msg)
             
-            # CẬP NHẬT: Enhanced logging
-            legal_chunks = sum(1 for d in documents if d.metadata.get('has_legal_structure', False))
-            articles_found = sum(d.metadata.get('contains_articles', 0) for d in documents)
+            # STEP 2: Analyze processed documents
+            doc_analysis = self._analyze_documents(documents)
+            logger.info(f"📊 Document analysis:")
+            logger.info(f"   📄 Files processed: {doc_analysis['files_count']}")
+            logger.info(f"   📦 Total chunks: {doc_analysis['total_chunks']}")
+            logger.info(f"   ❓ Q&A entries: {doc_analysis['qa_entries']}")
+            logger.info(f"   ⚖️ Legal documents: {doc_analysis['legal_documents']}")
             
-            logger.info(f"✅ Processed {len(documents)} document chunks")
-            logger.info(f"   ⚖️ Legal structure chunks: {legal_chunks}")
-            logger.info(f"   📜 Articles found: {articles_found}")
+            # STEP 3: Build vector store
+            logger.info("🧮 Building vector database...")
+            build_result = await self.vector_store.build_if_needed(force_rebuild=force_rebuild)
             
-            # Step 4: Add documents to vector store
-            logger.info("🧮 Adding documents to vector store...")
-            success = await self.vector_store.add_documents(documents)
+            if not build_result['success']:
+                error_msg = f"Vector store build failed: {build_result.get('message', 'Unknown error')}"
+                self.logger.log_error("VECTOR_BUILD_FAILED", error_msg, build_result)
+                raise Exception(error_msg)
             
-            if not success:
-                logger.error("❌ Failed to add documents to vector store")
-                return {
-                    'success': False,
-                    'message': 'Failed to add documents to vector store'
-                }
+            # STEP 4: Quick verification
+            logger.info("🧪 Verifying build...")
+            verification = await self._verify_build()
             
-            # Step 5: CẬP NHẬT - Enhanced final stats
-            final_stats = self.vector_store.get_stats()
-            embedding_stats = self.embedding_model.get_stats()
-            build_time = (datetime.now() - start_time).total_seconds()
+            if not verification['success']:
+                logger.warning(f"Build verification had issues: {verification.get('message')}")
+                # Don't fail build for verification issues, just warn
             
-            result = {
+            # SUCCESS
+            build_time = time.time() - start_time
+            self.stats['build_time'] = build_time
+            self.stats['files_processed'] = doc_analysis['files_count']
+            self.stats['total_chunks'] = doc_analysis['total_chunks']
+            
+            # Get vector store stats
+            vector_stats = build_result.get('stats', {})
+            
+            final_result = {
                 'success': True,
-                'message': f'Vector store built successfully in {build_time:.2f}s',
-                'stats': {
-                    'total_documents': final_stats['total_documents'],
-                    'build_time_seconds': build_time,
-                    'embedding_model': final_stats['embedding_model'],
-                    'dimension': final_stats.get('dimension', 'unknown'),
-                    'legal_chunks': legal_chunks,
-                    'articles_found': articles_found,
-                    'cache_size_mb': embedding_stats.get('cache_size_mb', 0),
-                    'use_e5_prefixes': embedding_stats.get('use_e5_prefixes', False)
-                }
+                'approach': 'Legal Article Extraction + DOCX Q&A',
+                'domain': self.domain,
+                'build_time': build_time,
+                'files_processed': self.stats['files_processed'],
+                'total_chunks': self.stats['total_chunks'],
+                'qa_entries': doc_analysis['qa_entries'],
+                'legal_documents': doc_analysis['legal_documents'],
+                'law_units_found': vector_stats.get('law_units_found', 0),
+                'vector_stats': vector_stats,
+                'verification': verification,
+                'message': f'✅ Built vector database with {self.stats["total_chunks"]} chunks in {build_time:.1f}s',
+                'log_file': self.logger.log_file
             }
             
-            logger.info("🎉 Vector store build completed successfully!")
-            logger.info(f"   📊 Documents: {final_stats['total_documents']}")
-            logger.info(f"   ⚖️ Legal chunks: {legal_chunks}")
-            logger.info(f"   📜 Articles: {articles_found}")
-            logger.info(f"   ⏱️ Time: {build_time:.2f}s")
-            logger.info(f"   🧠 Model: {final_stats['embedding_model']}")
+            build_success = True
+            logger.info("✅ Build completed successfully!")
             
-            return result
+            return final_result
             
         except Exception as e:
-            logger.error(f"❌ Build failed: {e}")
+            error_msg = str(e)
+            logger.error(f"❌ BUILD FAILED: {error_msg}")
+            
+            self.logger.log_error("BUILD_FAILED", error_msg, {'stats': self.stats})
+            
             return {
                 'success': False,
-                'message': f'Build failed: {str(e)}',
-                'error': str(e)
+                'error': error_msg,
+                'domain': self.domain,
+                'stats': self.stats,
+                'log_file': self.logger.log_file
             }
-    
-    async def test_embeddings(self, test_queries: list = None) -> Dict[str, Any]:
-        """CẬP NHẬT: Test embeddings với E5-base"""
-        if test_queries is None:
-            test_queries = [
-                "Điều kiện cấp hộ chiếu phổ thông",
-                "Thủ tục làm thị thực du lịch", 
-                "Lệ phí gia hạn tạm trú",
-                "Điều 15 Luật xuất nhập cảnh",
-                "Thành phần hồ sơ làm hộ chiếu"
-            ]
         
-        try:
-            logger.info("🧪 Testing embeddings với queries mới...")
-            
-            # CẬP NHẬT: Use new test method
-            result = self.embedding_model.test_embeddings(test_queries)
-            
-            if result['success']:
-                logger.info(f"✅ Embedding test passed")
-                logger.info(f"   📐 Dimension: {result['embedding_dimension']}")
-                logger.info(f"   📊 Avg self-similarity: {result['average_self_similarity']}")
-                logger.info(f"   🔧 Model features:")
-                
-                model_stats = result['model_stats']
-                if model_stats.get('use_e5_prefixes'):
-                    logger.info(f"      E5 query prefix: '{model_stats.get('query_prefix', 'None')}'")
-                    logger.info(f"      E5 doc prefix: '{model_stats.get('doc_prefix', 'None')}'")
-                
-                logger.info(f"      Normalization: {model_stats.get('normalize_embeddings', False)}")
-            else:
-                logger.error(f"❌ Embedding test failed: {result.get('error', 'Unknown')}")
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"❌ Embedding test failed: {e}")
-            return {
-                'success': False,
-                'message': f'Test failed: {str(e)}',
-                'error': str(e)
-            }
+        finally:
+            # Always save logs
+            try:
+                self.logger.finalize_log(build_success, self.stats)
+            except Exception as log_error:
+                logger.error(f"Failed to save logs: {log_error}")
     
-    async def test_vector_search(self, test_queries: list = None) -> Dict[str, Any]:
-        """CẬP NHẬT: Test vector search với entity reranking"""
-        if test_queries is None:
-            test_queries = [
-                "hộ chiếu trẻ em",  # Should trigger entity reranking
-                "Điều 10 luật xuất nhập cảnh",  # Legal specific
-                "lệ phí làm thị thực"  # Procedure + entity
-            ]
+    def _analyze_documents(self, documents: List) -> Dict[str, Any]:
+        """📊 Analyze processed documents"""
+        analysis = {
+            'total_chunks': len(documents),
+            'qa_entries': 0,
+            'legal_documents': 0,
+            'files_count': 0,
+            'content_types': {}
+        }
         
-        try:
-            logger.info("🔍 Testing vector search với entity reranking...")
+        files_seen = set()
+        
+        for doc in documents:
+            # Track unique files
+            source = doc.metadata.get('source', 'unknown')
+            files_seen.add(source)
             
-            if self.vector_store.get_stats()['total_documents'] == 0:
+            # Track content types
+            content_type = doc.metadata.get('content_type', 'unknown')
+            analysis['content_types'][content_type] = analysis['content_types'].get(content_type, 0) + 1
+            
+            if content_type == 'qa_entry':
+                analysis['qa_entries'] += 1
+            elif content_type == 'legal_document':
+                analysis['legal_documents'] += 1
+        
+        analysis['files_count'] = len(files_seen)
+        return analysis
+    
+    async def _verify_build(self) -> Dict[str, Any]:
+        """🧪 Simple build verification"""
+        try:
+            # Initialize vector store
+            init_result = await self.vector_store.initialize()
+            if not init_result['success']:
                 return {
                     'success': False,
-                    'message': 'Vector store is empty, build first'
+                    'message': f"Vector store initialization failed: {init_result.get('message')}"
                 }
             
-            search_results = {}
+            # Test searches with different types of queries
+            test_queries = [
+                "Điều kiện cấp hộ chiếu",           # Legal query
+                "Trẻ em dưới 14 tuổi",             # Age-specific query  
+                "Thủ tục làm hộ chiếu cho con tôi", # Q&A style query
+                "Lệ phí xuất cảnh"                 # Fee query
+            ]
+            
+            verification_results = []
             
             for query in test_queries:
-                logger.info(f"   Testing: '{query}'")
-                
-                # Extract entities for testing
-                entities = []
-                if 'hộ chiếu' in query.lower():
-                    entities.append('hộ chiếu')
-                if 'trẻ em' in query.lower():
-                    entities.append('trẻ em')
-                if 'lệ phí' in query.lower():
-                    entities.append('lệ phí')
-                if 'thị thực' in query.lower():
-                    entities.append('thị thực')
-                
-                # Test search với entity reranking
-                results = await self.vector_store.search(
-                    query, 
-                    k=3, 
-                    query_entities=entities
-                )
-                
-                search_results[query] = {
-                    'results_count': len(results),
-                    'entities_used': entities,
-                    'top_scores': [r.get('final_score', r.get('score', 0)) for r in results[:2]]
-                }
-                
-                logger.info(f"      Found: {len(results)} results")
-                if results:
-                    logger.info(f"      Top score: {results[0].get('final_score', results[0].get('score', 0)):.3f}")
+                try:
+                    results = await self.vector_store.search(query, k=3)
+                    verification_results.append({
+                        'query': query,
+                        'results_count': len(results),
+                        'success': len(results) > 0,
+                        'has_qa': any(r.get('metadata', {}).get('content_type') == 'qa_entry' for r in results),
+                        'has_legal': any(r.get('metadata', {}).get('content_type') == 'legal_document' for r in results)
+                    })
+                except Exception as e:
+                    verification_results.append({
+                        'query': query,
+                        'results_count': 0,
+                        'success': False,
+                        'error': str(e)
+                    })
+            
+            # Overall verification
+            successful_queries = sum(1 for r in verification_results if r['success'])
+            qa_working = any(r.get('has_qa', False) for r in verification_results)
+            legal_working = any(r.get('has_legal', False) for r in verification_results)
+            
+            verification_success = successful_queries >= len(test_queries) // 2
+            
+            verification = {
+                'success': verification_success,
+                'test_queries_passed': f"{successful_queries}/{len(test_queries)}",
+                'qa_system_working': qa_working,
+                'legal_system_working': legal_working,
+                'results': verification_results,
+                'message': 'Build verification passed' if verification_success else 'Build verification had issues'
+            }
+            
+            logger.info(f"🧪 Verification: {successful_queries}/{len(test_queries)} queries passed")
+            logger.info(f"   Q&A system: {'✅' if qa_working else '❌'}")
+            logger.info(f"   Legal system: {'✅' if legal_working else '❌'}")
+            
+            return verification
+            
+        except Exception as e:
+            self.logger.log_error("VERIFICATION_ERROR", str(e))
+            return {
+                'success': False,
+                'message': f"Verification error: {str(e)}"
+            }
+    
+    # Utility methods
+    async def clear_domain(self) -> Dict[str, Any]:
+        """🗑️ Clear domain data"""
+        try:
+            logger.info(f"🗑️ Clearing domain: {self.domain}")
+            
+            files = [
+                "documents.pkl", "metadata.pkl", "faiss_index.bin", 
+                "build_log.json", "embeddings_cache_enhanced.pkl"
+            ]
+            
+            removed = 0
+            for filename in files:
+                filepath = os.path.join(config.vector_store_path, filename)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    removed += 1
+            
+            logger.info(f"✅ Removed {removed} files")
             
             return {
                 'success': True,
-                'search_results': search_results,
-                'vector_store_stats': self.vector_store.get_stats()
+                'message': f'Cleared {removed} files for domain {self.domain}',
+                'files_removed': removed
             }
             
         except Exception as e:
-            logger.error(f"❌ Vector search test failed: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            logger.error(f"❌ Clear failed: {e}")
+            return {'success': False, 'error': str(e)}
     
-    def get_build_stats(self) -> Dict[str, Any]:
-        """CẬP NHẬT: Enhanced build stats"""
-        config_summary = get_config_summary_enhanced()
+    async def quick_test(self, query: str = None) -> Dict[str, Any]:
+        """🧪 Quick search test"""
+        if not query:
+            query = "Con tôi 5 tuổi có được làm hộ chiếu không?"
         
-        return {
-            'config': config_summary,
-            'vector_store': self.vector_store.get_stats(),
-            'embedding_model': self.embedding_model.get_stats(),
-            'enhanced_features': [
-                'legal_structure_chunking',
-                'entity_reranking_support', 
-                'e5_base_optimization',
-                'query_doc_prefixes',
-                'normalized_embeddings'
-            ]
-        }
+        logger.info(f"🧪 Quick test: '{query}'")
+        
+        try:
+            init_result = await self.vector_store.initialize()
+            
+            if not init_result['success']:
+                return {
+                    'success': False,
+                    'query': query,
+                    'error': 'Vector store not ready - run --build first'
+                }
+            
+            results = await self.vector_store.search(query, k=5)
+            health = self.vector_store.get_health_status()
+            
+            # Analyze results
+            qa_results = [r for r in results if r.get('metadata', {}).get('content_type') == 'qa_entry']
+            legal_results = [r for r in results if r.get('metadata', {}).get('content_type') == 'legal_document']
+            
+            logger.info(f"   📊 Results: {len(results)} total ({len(qa_results)} Q&A, {len(legal_results)} legal)")
+            
+            return {
+                'success': len(results) > 0,
+                'query': query,
+                'results_count': len(results),
+                'qa_results': len(qa_results),
+                'legal_results': len(legal_results),
+                'database_ready': len(results) > 0,
+                'sample_results': [
+                    {
+                        'content_preview': result.get('content', '')[:100] + '...',
+                        'score': result.get('score', 0),
+                        'type': result.get('metadata', {}).get('content_type', 'unknown'),
+                        'source': result.get('metadata', {}).get('source', 'unknown')
+                    }
+                    for result in results[:3]
+                ]
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Quick test failed: {e}")
+            return {'success': False, 'error': str(e), 'query': query}
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """📊 Get comprehensive stats"""
+        try:
+            health = self.vector_store.get_health_status()
+            
+            return {
+                'domain': self.domain,
+                'approach': 'Legal Article Extraction + DOCX Q&A',
+                'build_stats': self.stats,
+                'vector_health': health,
+                'paths': {
+                    'documents': config.documents_path,
+                    'vector_store': config.vector_store_path
+                },
+                'log_file': self.logger.log_file,
+                'features': [
+                    'Legal document processing (Điều/Khoản/Điểm)',
+                    'DOCX Q&A processing (CÂU HỎI/TRẢ LỜI)',
+                    'Enhanced embeddings với Vietnamese support',
+                    'Content priority search (Q&A priority)',
+                    'Intent-aware search'
+                ]
+            }
+        except Exception as e:
+            return {'error': f'Failed to get stats: {e}'}
+
 
 async def main():
-    """CẬP NHẬT: Main build function với enhanced options"""
-    print("🚀 Vietnamese Legal RAG - Vector Store Builder v2.0")
-    print("=" * 55)
+    """🚀 Main function"""
+    parser = argparse.ArgumentParser(description="Vector Database Builder for Legal RAG Chatbot")
     
-    builder = VectorStoreBuilder()
+    # Domain
+    parser.add_argument('--domain', '-d', default='xuatnhapcanh', 
+                       help='Domain to build')
     
-    # Check arguments
-    force_rebuild = '--force' in sys.argv or '-f' in sys.argv
-    test_only = '--test' in sys.argv or '-t' in sys.argv
-    search_test = '--search' in sys.argv or '-s' in sys.argv
-    stats_only = '--stats' in sys.argv
+    # Actions
+    parser.add_argument('--force', '-f', action='store_true', 
+                       help='Force rebuild')
+    parser.add_argument('--build', '-b', action='store_true', 
+                       help='Build database')
+    parser.add_argument('--clear', '-c', action='store_true', 
+                       help='Clear data')
+    parser.add_argument('--stats', '-s', action='store_true', 
+                       help='Show stats')
+    parser.add_argument('--quick-test', '-q', type=str, nargs='?', const='', 
+                       help='Quick test with optional custom query')
     
-    if stats_only:
-        # Show current stats only
-        print("📊 Current build stats:")
-        stats = builder.get_build_stats()
-        print(f"✅ Config: {stats['config']}")
+    # Config
+    parser.add_argument('--simple-mode', action='store_true', 
+                       help='Enable simple mode config')
+    
+    args = parser.parse_args()
+    
+    # Apply simple mode config
+    if args.simple_mode:
+        configure_for_simple_mode()
+        logger.info("🎯 Simple mode config applied")
+    
+    # Initialize builder
+    builder = RAGBuilder(domain=args.domain)
+    
+    # Execute commands
+    if args.clear:
+        result = await builder.clear_domain()
+        if result['success']:
+            print(f"✅ {result['message']}")
+        else:
+            print(f"❌ {result.get('error')}")
         return
     
-    if test_only:
-        # Test embeddings only
-        print("🧪 Testing embeddings...")
-        result = await builder.test_embeddings()
-        print(f"✅ Test result: {result}")
+    if args.stats:
+        stats = builder.get_stats()
+        if 'error' in stats:
+            print(f"❌ {stats['error']}")
+        else:
+            print(f"📂 Domain: {stats['domain']}")
+            print(f"🎯 Approach: {stats['approach']}")
+            print(f"📄 Files: {stats['build_stats']['files_processed']}")
+            print(f"📦 Total chunks: {stats['build_stats']['total_chunks']}")
+            print(f"📝 Log: {stats['log_file']}")
+            
+            health = stats['vector_health']
+            if 'searcher_stats' in health:
+                vs = health['searcher_stats']
+                print(f"🧮 Vectors: {vs.get('documents_loaded', 0)}")
+                print(f"🔍 Searches: {vs.get('search_performance', {}).get('total_searches', 0)}")
         return
     
-    if search_test:
-        # Test vector search only
-        print("🔍 Testing vector search...")
-        result = await builder.test_vector_search()
-        print(f"✅ Search test: {result}")
+    if args.quick_test is not None:
+        query = args.quick_test if args.quick_test else None
+        result = await builder.quick_test(query)
+        
+        print(f"🧪 Quick Test:")
+        print(f"   Query: {result['query']}")
+        print(f"   Ready: {'✅' if result['success'] else '❌'}")
+        print(f"   Results: {result.get('results_count', 0)}")
+        if 'qa_results' in result:
+            print(f"   Q&A: {result['qa_results']}, Legal: {result['legal_results']}")
+        
+        if result.get('error'):
+            print(f"   Error: {result['error']}")
         return
     
-    # CẬP NHẬT: Enhanced build process
-    print(f"🔧 Using embedding model: {config.embedding_model}")
-    print(f"📁 Documents path: {config.documents_path}")
-    print(f"💾 Vector store path: {config.vector_store_path}")
-    print()
+    # Build command
+    if args.force or args.build:
+        force = args.force
+        action = "Force rebuilding" if force else "Building"
+        
+        logger.info(f"🔨 {action} vector database for {args.domain}")
+        
+        result = await builder.build(force_rebuild=force)
+        
+        if result['success']:
+            print(f"\n🎉 BUILD SUCCESSFUL!")
+            print(f"   Approach: {result['approach']}")
+            print(f"   Domain: {result['domain']}")
+            print(f"   Files: {result['files_processed']}")
+            print(f"   Total chunks: {result['total_chunks']}")
+            print(f"   Q&A entries: {result['qa_entries']}")
+            print(f"   Legal documents: {result['legal_documents']}")
+            print(f"   Law units found: {result['law_units_found']}")
+            print(f"   Build time: {result['build_time']:.1f}s")
+            print(f"\n📝 Build log: {result['log_file']}")
+            
+            # Show verification results
+            verification = result.get('verification', {})
+            if verification:
+                print(f"\n🧪 Verification: {verification['test_queries_passed']} test queries passed")
+                print(f"   Q&A system: {'✅' if verification.get('qa_system_working') else '❌'}")
+                print(f"   Legal system: {'✅' if verification.get('legal_system_working') else '❌'}")
+                
+        else:
+            print(f"\n❌ BUILD FAILED!")
+            print(f"Error: {result.get('error')}")
+            if 'log_file' in result:
+                print(f"\n📝 Check build log: {result['log_file']}")
+            sys.exit(1)
+        return
     
-    # Build vector store
-    result = await builder.build(force_rebuild=force_rebuild)
-    
-    if result['success']:
-        print("\n🎉 BUILD SUCCESSFUL!")
-        print(f"📊 {result['stats']['total_documents']} documents indexed")
-        print(f"⚖️ {result['stats']['legal_chunks']} legal structure chunks")
-        print(f"📜 {result['stats']['articles_found']} articles found")
-        print(f"⏱️ Build time: {result['stats']['build_time_seconds']:.2f}s")
-        
-        # CẬP NHẬT: Enhanced post-build options
-        print("\n🧪 Post-build tests:")
-        
-        # Test embeddings
-        test_input = input("Test embeddings? (y/N): ")
-        if test_input.lower() == 'y':
-            test_result = await builder.test_embeddings()
-            if test_result['success']:
-                print("✅ Embedding test passed!")
-            else:
-                print(f"❌ Embedding test failed: {test_result.get('message', 'Unknown error')}")
-        
-        # Test vector search
-        search_input = input("Test vector search với entity reranking? (y/N): ")
-        if search_input.lower() == 'y':
-            search_result = await builder.test_vector_search()
-            if search_result['success']:
-                print("✅ Vector search test passed!")
-                print(f"📊 Search results: {search_result['search_results']}")
-            else:
-                print(f"❌ Vector search test failed: {search_result.get('error', 'Unknown error')}")
-        
-    else:
-        print(f"\n❌ BUILD FAILED: {result['message']}")
-        if 'error' in result:
-            print(f"Error details: {result['error']}")
-        sys.exit(1)
+    # No action - show help
+    print("🔨 Vector Database Builder for Legal RAG Chatbot:")
+    print("  --force (-f)     : Force rebuild")
+    print("  --build (-b)     : Build database")  
+    print("  --clear (-c)     : Clear data")
+    print("  --stats (-s)     : Show stats")
+    print("  --quick-test (-q): Quick test [optional custom query]")
+    print("  --simple-mode    : Enable simple mode config")
+    print("\nApproach: Legal Article Extraction + DOCX Q&A")
+    print("\nKey Features:")
+    print("  ✅ Legal document processing (Điều/Khoản/Điểm structure)")
+    print("  ✅ DOCX Q&A support (CÂU HỎI/TRẢ LỜI format)")
+    print("  ✅ Enhanced Vietnamese embeddings")
+    print("  ✅ Content priority search (Q&A gets priority)")
+    print("  ✅ Build verification with test queries")
+    print("\nExamples:")
+    print("  python build_vector.py --domain xuatnhapcanh --build --simple-mode")
+    print("  python build_vector.py --quick-test \"Con tôi 5 tuổi làm hộ chiếu\"")
+    print("  python build_vector.py --stats")
+
 
 if __name__ == "__main__":
-    # CẬP NHẬT: Enhanced usage examples
-    print("Usage examples:")
-    print("  python build_vector.py          # Normal build with prompts")
-    print("  python build_vector.py --force  # Force rebuild")
-    print("  python build_vector.py --test   # Test embeddings only")
-    print("  python build_vector.py --search # Test vector search only")
-    print("  python build_vector.py --stats  # Show current stats")
-    print()
-    
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n⚠️ Build cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ Fatal error: {e}")
+        sys.exit(1)

@@ -1,345 +1,481 @@
-# server/services/vector_rag/query_classifier.py
-"""
-Query Classifier - SỬA LOGIC: Thêm query normalization
-"""
-import re
-from typing import Dict, List, Tuple, Any
-from dataclasses import dataclass
-import logging
-from services.vector_rag.rag_config import XUATNHAPCANH_WEB_PROCEDURES
+# # server/services/vector_rag/query_classifier.py - FINAL VERSION
+# """
+# Query Classifier - Phân tích rõ ý định + yêu cầu công dân để Vector tìm đúng quy định
+# """
+# import re
+# from typing import Dict, List, Tuple, Optional, Any
+# from dataclasses import dataclass
+# from datetime import datetime
+# import logging
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
-@dataclass
-class QueryFeatures:
-    """Query features với normalization"""
-    primary_intent: str = "GENERAL"
-    confidence: float = 0.0
-    search_strategy: str = "hybrid"
-    legal_articles: List[str] = None
-    procedure_entities: List[str] = None
-    has_specific_article: bool = False
-    has_procedure_request: bool = False
-    enhanced_keywords: List[str] = None
+# @dataclass
+# class QueryFeatures:
+#     """Thông tin để Vector tìm đúng quy định"""
+#     original_query: str
+#     primary_intent: str        # DIRECT_ARTICLE, LEGAL_ADVISORY, PROCEDURE
+#     subject_type: str
+#     confidence: float
     
-    # SỬA LOGIC: Thêm normalized query
-    original_query: str = ""
-    normalized_query: str = ""
-    extracted_entities: List[str] = None
-    context_needed: bool = False
+#     # Ý định công dân
+#     needs_conclusion: bool = False      # Cần kết luận ĐƯỢC/KHÔNG/TÙY TRƯỜNG HỢP
+#     has_direct_article: bool = False    # Hỏi điều luật cụ thể
+#     is_followup: bool = False
     
-    def __post_init__(self):
-        for field in ['legal_articles', 'procedure_entities', 'enhanced_keywords', 'extracted_entities']:
-            if getattr(self, field) is None:
-                setattr(self, field, [])
+#     # Yêu cầu cụ thể
+#     age_constraint: Optional[str] = None
+#     legal_status: Optional[str] = None
+#     document_type: Optional[str] = None
+#     purpose: Optional[str] = None
+    
+#     # Thông tin để Vector search
+#     enhanced_keywords: List[str] = None
+#     direct_article_info: Optional[Dict] = None
+#     focus_keywords: List[str] = None
+#     domains: List[str] = None
+    
+#     def __post_init__(self):
+#         if self.enhanced_keywords is None:
+#             self.enhanced_keywords = []
+#         if self.focus_keywords is None:
+#             self.focus_keywords = []
+#         if self.domains is None:
+#             self.domains = []
 
-class VietnameseQueryClassifier:
-    """Query Classifier với normalization logic"""
+# class ConclusionDetector:
+#     """🔧 FIXED: Better Vietnamese legal question detection"""
     
-    def __init__(self):
-        # Core intents
-        self.core_intents = {
-            'LEGAL': {
-                'keywords': ['điều', 'khoản', 'điểm', 'luật', 'nghị định', 'thông tư', 'quy định', 'theo'],
-                'weight': 0.9
-            },
-            'PROCEDURE': {
-                'keywords': ['thủ tục', 'hồ sơ', 'cấp', 'làm', 'xin', 'nộp', 'trình tự', 'quy trình', 'bước'],
-                'weight': 0.8
-            },
-            'GENERAL': {
-                'keywords': [],
-                'weight': 0.5
-            }
-        }
-        
-        # SỬA LOGIC: Entity mapping cho normalization
-        self.entity_mapping = {
-            'hộ chiếu': ['ho chieu', 'passport', 'hc'],
-            'thị thực': ['thi thuc', 'visa', 'tt'],  
-            'tạm trú': ['tam tru', 'temporary residence'],
-            'thường trú': ['thuong tru', 'permanent residence'],
-            'trẻ em': ['tre em', 'children', 'child', 'bé', 'con'],
-            'lệ phí': ['le phi', 'phí', 'chi phí', 'fee'],
-            'hồ sơ': ['ho so', 'giấy tờ', 'documents'],
-            'thời gian': ['thoi gian', 'bao lâu', 'mất bao nhiêu'],
-            'cơ quan': ['co quan', 'ở đâu', 'nơi nào']
-        }
-        
-        # Incomplete patterns cần context
-        self.incomplete_patterns = [
-            r'^(còn|thế còn|vậy|vậy thì)',
-            r'^(làm sao|thế nào)(?!\s+để)',
-            r'^(có|được không)',
-            r'^(bao nhiêu|mấy|bao lâu)', 
-        ]
-        
-        # Legal patterns
-        self.legal_patterns = {
-            'article': r'điều\s+(\d+[a-z]?)',
-            'paragraph': r'khoản\s+(\d+)',
-            'point': r'điểm\s+([a-z]+)'
-        }
-        
-        # Domain entities
-        self.domain_entities = [
-            'hộ chiếu', 'thị thực', 'tạm trú', 'thường trú', 
-            'xuất cảnh', 'nhập cảnh', 'trẻ em', 'lệ phí'
-        ]
-        
-        # Procedures
-        self.procedures = XUATNHAPCANH_WEB_PROCEDURES
-    
-    def classify(self, question: str, chat_history: List[str] = None) -> QueryFeatures:
-        """SỬA LOGIC: Classify với normalization"""
-        original_question = question.strip()
-        
-        # 1. Normalize query trước
-        normalized_question = self._normalize_query(original_question, chat_history)
-        
-        # 2. Extract entities từ normalized query
-        extracted_entities = self._extract_entities(normalized_question)
-        
-        # 3. Extract legal references
-        legal_refs = self._extract_legal_refs(normalized_question)
-        
-        # 4. Detect intent
-        intent, confidence = self._detect_intent(normalized_question, legal_refs)
-        
-        # 5. Match procedures
-        procedure_entities = self._match_procedures(normalized_question)
-        
-        # 6. Generate enhanced keywords
-        enhanced_keywords = self._generate_enhanced_keywords(normalized_question, extracted_entities)
-        
-        # 7. Determine search strategy
-        search_strategy = self._get_search_strategy(intent, legal_refs, procedure_entities)
-        
-        # 8. Check if context was needed
-        context_needed = len(normalized_question) > len(original_question)
-        
-        features = QueryFeatures(
-            original_query=original_question,
-            normalized_query=normalized_question,
-            primary_intent=intent,
-            confidence=confidence,
-            search_strategy=search_strategy,
-            legal_articles=legal_refs,
-            procedure_entities=procedure_entities,
-            has_specific_article=len(legal_refs) > 0,
-            has_procedure_request=len(procedure_entities) > 0,
-            enhanced_keywords=enhanced_keywords,
-            extracted_entities=extracted_entities,
-            context_needed=context_needed
-        )
-        
-        logger.info(f"🎯 Classified: {intent} (conf: {confidence:.2f}) | Normalized: {context_needed}")
-        return features
-    
-    def _normalize_query(self, query: str, chat_history: List[str] = None) -> str:
-        """SỬA LOGIC: Normalize câu hỏi"""
-        query_lower = query.lower().strip()
-        
-        # Check if needs context
-        needs_context = self._needs_context(query_lower)
-        
-        # Add context from history if needed
-        if needs_context and chat_history:
-            enhanced_query = self._add_context_from_history(query, chat_history)
-        else:
-            enhanced_query = query
-        
-        # Normalize entities
-        normalized = self._normalize_entities(enhanced_query)
-        
-        # Make standalone if incomplete
-        if self._is_incomplete_question(normalized.lower()):
-            normalized = self._make_standalone(normalized)
-        
-        return normalized
-    
-    def _needs_context(self, query: str) -> bool:
-        """Check if query needs context"""
-        for pattern in self.incomplete_patterns:
-            if re.match(pattern, query):
-                return True
-        
-        # Very short and vague
-        if len(query.split()) <= 3 and any(word in query for word in ['gì', 'sao', 'nào']):
-            return True
-        
-        return False
-    
-    def _add_context_from_history(self, query: str, history: List[str]) -> str:
-        """Add context from chat history"""
-        if not history:
-            return query
-        
-        # Get entities from recent history
-        recent_entities = set()
-        for prev_query in history[-3:]:
-            for entity in self.domain_entities:
-                if entity in prev_query.lower():
-                    recent_entities.add(entity)
-        
-        if recent_entities:
-            main_entity = list(recent_entities)[0]
-            query_lower = query.lower()
+#     def __init__(self):
+#         self.conclusion_patterns = [
+#             # 🔧 ENHANCED: More specific patterns
+#             r'(?:tôi|mình|em|anh|chị).*(?:có\s+được|được\s+phép|có\s+thể).*(?:không|hay\s+không)',
+#             r'(?:bị|đang).*(?:khởi\s+tố|truy\s+cứu|điều\s+tra).*(?:có.*không|được.*không)',
+#             r'(?:trẻ\s+em|dưới\s+14|chưa\s+thành\s+niên).*(?:có\s+được|được\s+phép|có\s+thể).*không',
+#             r'(?:hết\s+hạn|quá\s+hạn|vi\s+phạm).*(?:có.*không|được.*không)',
             
-            if query_lower.startswith('còn'):
-                return f"{main_entity} {query}"
-            elif query_lower.startswith('thế'):
-                return f"Thế {main_entity} {query[3:]}"
-            else:
-                return f"{main_entity} {query}"
-        
-        return query
-    
-    def _normalize_entities(self, query: str) -> str:
-        """Normalize entities in query"""
-        normalized = query.lower()
-        
-        # Replace variants with standard forms
-        for standard, variants in self.entity_mapping.items():
-            for variant in variants:
-                if variant in normalized:
-                    normalized = normalized.replace(variant, standard)
-        
-        return normalized
-    
-    def _is_incomplete_question(self, query: str) -> bool:
-        """Check if question is incomplete"""
-        return len(query.split()) <= 4 and not any(entity in query for entity in self.domain_entities)
-    
-    def _make_standalone(self, query: str) -> str:
-        """Make question standalone"""
-        if 'làm' in query and 'thủ tục' not in query:
-            return f"Thủ tục {query}"
-        
-        if any(word in query for word in ['điều kiện', 'cần gì']):
-            return f"Điều kiện {query}"
-        
-        return query
-    
-    def _extract_entities(self, query: str) -> List[str]:
-        """Extract entities from query"""
-        entities = []
-        query_lower = query.lower()
-        
-        for entity in self.domain_entities:
-            if entity in query_lower:
-                entities.append(entity)
-        
-        return entities
-    
-    def _extract_legal_refs(self, query: str) -> List[str]:
-        """Extract legal references"""
-        legal_refs = []
-        
-        for ref_type, pattern in self.legal_patterns.items():
-            matches = re.findall(pattern, query, re.IGNORECASE)
-            for match in matches:
-                if ref_type == 'article':
-                    legal_refs.append(f"Điều {match}")
-                elif ref_type == 'paragraph':
-                    legal_refs.append(f"Khoản {match}")
-                elif ref_type == 'point':
-                    legal_refs.append(f"Điểm {match}")
-        
-        return legal_refs
-    
-    def _detect_intent(self, query: str, legal_refs: List[str]) -> Tuple[str, float]:
-        """Detect intent"""
-        if legal_refs:
-            return 'LEGAL', 0.9
-        
-        query_lower = query.lower()
-        intent_scores = {}
-        
-        for intent, config in self.core_intents.items():
-            if not config['keywords']:
-                intent_scores[intent] = 0.3
-                continue
+#             # Basic patterns
+#             r'có\s+(?:được\s+)?\w+.*(?:được\s+)?không',
+#             r'(?:được\s+phép|có\s+thể).*(?:không|hay\s+không)',
+#             r'có\s+cách\s+nào.*không',
             
-            matches = sum(1 for kw in config['keywords'] if kw in query_lower)
-            if matches > 0:
-                score = min((matches / len(config['keywords'])) * config['weight'], 0.95)
-                intent_scores[intent] = score
+#             # Followup patterns
+#             r'vậy.*(?:có\s+được|được\s+phép|có\s+thể)',
+#             r'nếu.*thì.*(?:có\s+được|được\s+phép)',
+#         ]
+    
+#     def detect_needs_conclusion(self, query: str) -> bool:
+#         """🔧 FIXED: Better conclusion detection"""
+#         query_lower = query.lower().strip()
         
-        if intent_scores:
-            best_intent = max(intent_scores, key=intent_scores.get)
-            best_score = intent_scores[best_intent]
+#         # Check each pattern
+#         for pattern in self.conclusion_patterns:
+#             if re.search(pattern, query_lower):
+#                 return True
+        
+#         # Additional heuristics
+#         if '?' in query and ('có' in query_lower or 'được' in query_lower):
+#             return True
             
-            if best_score >= 0.2:
-                return best_intent, best_score
-        
-        return 'GENERAL', 0.4
+#         return False
+
+# class DirectArticleDetector:
+#     """Detect câu hỏi về điều luật cụ thể"""
     
-    def _match_procedures(self, query: str) -> List[str]:
-        """Match procedures"""
-        query_words = set(query.lower().split())
-        matched = []
-        
-        for proc_name, code in self.procedures.items():
-            proc_words = set(proc_name.lower().split())
-            intersection = query_words & proc_words
-            
-            if len(intersection) >= 2:
-                score = len(intersection) / len(proc_words)
-                if score > 0.3:
-                    matched.append(f"procedure_{code}")
-        
-        return matched
+#     def __init__(self):
+#         self.article_patterns = {
+#             'clause_specific': re.compile(
+#                 r'khoản\s+(\d+)\s+điều\s+(\d+[a-z]?)',
+#                 re.IGNORECASE
+#             ),
+#             'article_question': re.compile(
+#                 r'điều\s+(\d+[a-z]?)\s+(?:.*?)\s*(?:quy\s+định|nói\s+về|là\s+gì)',
+#                 re.IGNORECASE
+#             ),
+#             'law_article': re.compile(
+#                 r'điều\s+(\d+[a-z]?)\s+luật\s+(.+?)(?:\s|$|,|\?)',
+#                 re.IGNORECASE
+#             ),
+#             'according_to': re.compile(
+#                 r'theo\s+điều\s+(\d+[a-z]?)',
+#                 re.IGNORECASE
+#             )
+#         }
     
-    def _generate_enhanced_keywords(self, query: str, entities: List[str]) -> List[str]:
-        """Generate enhanced keywords"""
-        keywords = set(re.findall(r'\b\w{3,}\b', query.lower()))
-        keywords.update(entities)
+#     def detect_direct_article(self, query: str) -> Optional[Dict]:
+#         query_clean = query.strip()
         
-        # Add variants for entities
-        for entity in entities:
-            if entity in self.entity_mapping:
-                keywords.update(self.entity_mapping[entity][:2])
+#         # Check khoản X điều Y
+#         match = self.article_patterns['clause_specific'].search(query_clean)
+#         if match:
+#             return {
+#                 'type': 'clause_specific',
+#                 'clause': match.group(1),
+#                 'article': match.group(2),
+#                 'confidence': 0.95
+#             }
         
-        # Remove stop words
-        stop_words = {'các', 'của', 'và', 'có', 'được', 'cho', 'với', 'như', 'này', 'đó'}
-        keywords = keywords - stop_words
+#         # Check điều X quy định gì
+#         match = self.article_patterns['article_question'].search(query_clean)
+#         if match:
+#             return {
+#                 'type': 'article_question',
+#                 'article': match.group(1),
+#                 'confidence': 0.90
+#             }
         
-        return list(keywords)
+#         # Check điều X luật Y
+#         match = self.article_patterns['law_article'].search(query_clean)
+#         if match:
+#             return {
+#                 'type': 'law_article',
+#                 'article': match.group(1),
+#                 'law_name': match.group(2).strip(),
+#                 'confidence': 0.95
+#             }
+        
+#         # Check theo điều X
+#         match = self.article_patterns['according_to'].search(query_clean)
+#         if match:
+#             return {
+#                 'type': 'according_to',
+#                 'article': match.group(1),
+#                 'confidence': 0.85
+#             }
+        
+#         return None
+
+# class ConstraintDetector:
+#     """🔧 FIXED: Better constraint detection for Vietnamese legal queries"""
     
-    def _get_search_strategy(self, intent: str, legal_refs: List[str], procedure_entities: List[str]) -> str:
-        """Determine search strategy"""
-        if intent == 'LEGAL' or legal_refs:
-            return 'vector_priority'
-        elif intent == 'PROCEDURE' or procedure_entities:
-            return 'web_priority'
-        else:
-            return 'hybrid'
+#     def __init__(self):
+#         self.legal_status_patterns = {
+#             'pending_trial': [
+#                 r'bị\s*khởi\s*tố', r'bị\s*truy\s*cứu', r'đang\s*bị\s*điều\s*tra',
+#                 r'bị\s*can', r'bị\s*cáo', r'đang\s*bị\s*xử\s*lý'
+#             ],
+#             'admin_violation': [
+#                 r'vi\s*phạm\s*hành\s*chính', r'bị\s*phạt.*chưa\s*đóng', 
+#                 r'chưa\s*nộp\s*tiền\s*phạt', r'có\s*vi\s*phạm'
+#             ],
+#             'document_expired': [
+#                 r'hết\s*hạn', r'quá\s*hạn', r'hết\s*giá\s*trị',
+#                 r'không\s*còn\s*hiệu\s*lực'
+#             ]
+#         }
+        
+#         # 🔧 NEW: More comprehensive age patterns
+#         self.age_patterns = {
+#             'under_14': [
+#                 r'trẻ\s*em\s*dưới\s*14', r'dưới\s*14\s*tuổi', 
+#                 r'chưa\s*đủ\s*14', r'(?:em|con)\s*(?:mới\s*)?1[0-3]\s*tuổi'
+#             ],
+#             'under_18': [
+#                 r'dưới\s*18\s*tuổi', r'chưa\s*thành\s*niên',
+#                 r'(?:em|con)\s*(?:mới\s*)?1[4-7]\s*tuổi'
+#             ],
+#             'adult': [
+#                 r'trên\s*18\s*tuổi', r'đã\s*thành\s*niên',
+#                 r'người\s*lớn', r'(?:anh|chị|tôi)\s*(?:đã\s*)?(?:[2-9]\d|\d{3})\s*tuổi'
+#             ]
+#         }
+        
+#         # Enhanced patterns
+#         self.subject_patterns = {
+#             'VIETNAM_CITIZEN': [
+#                 r'tôi', r'mình', r'em', r'anh', r'chị',
+#                 r'công\s*dân\s*việt\s*nam', r'người\s*việt\s*nam'
+#             ],
+#             'FOREIGNER': [
+#                 r'người\s*nước\s*ngoài', r'ngoại\s*kiều',
+#                 r'người\s*ấy', r'bạn\s*tôi.*nước\s*ngoài'
+#             ]
+#         }
     
-    def format_query_for_vector(self, question: str, features: QueryFeatures) -> str:
-        """Format query for vector search - use normalized version"""
-        if features.has_specific_article:
-            return features.normalized_query
+#     def detect_constraints(self, query: str) -> Dict[str, Optional[str]]:
+#         """🔧 FIXED: Better constraint detection"""
+#         query_lower = query.lower()
+#         constraints = {
+#             'age_constraint': None,
+#             'legal_status': None,
+#             'document_type': None,
+#             'purpose': None,
+#             'subject_type': 'VIETNAM_CITIZEN'  # Default
+#         }
         
-        # Build enhanced query from normalized + entities
-        parts = [features.normalized_query]
-        parts.extend(features.legal_articles[:2])
-        parts.extend([e for e in features.extracted_entities if not e.startswith('procedure_')])
+#         # 🔧 FIXED: Better age detection
+#         for age_type, patterns in self.age_patterns.items():
+#             if any(re.search(pattern, query_lower) for pattern in patterns):
+#                 constraints['age_constraint'] = age_type
+#                 break
         
-        enhanced = ' '.join(parts)
-        return re.sub(r'\s+', ' ', enhanced).strip()[:150]
+#         # 🔧 FIXED: Better legal status detection
+#         for status_type, patterns in self.legal_status_patterns.items():
+#             if any(re.search(pattern, query_lower) for pattern in patterns):
+#                 constraints['legal_status'] = status_type
+#                 break
+        
+#         # 🔧 FIXED: Better subject detection
+#         for subject_type, patterns in self.subject_patterns.items():
+#             if any(re.search(pattern, query_lower) for pattern in patterns):
+#                 constraints['subject_type'] = subject_type
+#                 break
+        
+#         return constraints
+
+# class IntentClassifier:
+#     """Classify ý định chính của công dân"""
     
-    def get_search_config(self, features: QueryFeatures) -> Dict[str, Any]:
-        """Get search configuration"""
-        base_config = {
-            'vector_k': 5,
-            'web_k': 3,
-            'similarity_threshold': 0.15
-        }
+#     def __init__(self):
+#         self.procedure_patterns = [
+#             r'(?:làm|xin|nộp|cấp).*(?:như\s+thế\s+nào|thế\s+nào|cần\s+gì)',
+#             r'thủ\s+tục.*(?:như\s+thế\s+nào|gì|ra\s+sao)',
+#             r'(?:hồ\s+sơ|giấy\s+tờ).*(?:gì|cần|bao\s+gồm)',
+#             r'(?:lệ\s+phí|chi\s+phí|phí).*(?:bao\s+nhiêu|là\s+gì)',
+#             r'cần\s+(?:chuẩn\s+bị|làm|mang)\s+gì',
+#             r'(?:ở\s+đâu|tại\s+đâu).*(?:làm|nộp|xin)',
+#             r'(?:bao\s+lâu|mất\s+bao\s+lâu).*(?:để|cho)',
+#             r'(?:đến|sang)\s+\w+\s+cần.*gì'
+#         ]
+    
+#     def classify_intent(self, query: str, has_direct_article: bool, needs_conclusion: bool) -> Tuple[str, float]:
+#         # Priority 1: Direct Article
+#         if has_direct_article:
+#             return 'DIRECT_ARTICLE', 0.95
         
-        if features.search_strategy == 'vector_priority':
-            base_config.update({'vector_k': 7, 'web_k': 2})
-        elif features.search_strategy == 'web_priority':
-            base_config.update({'vector_k': 3, 'web_k': 5})
+#         # Priority 2: Procedure
+#         query_lower = query.lower()
+#         for pattern in self.procedure_patterns:
+#             if re.search(pattern, query_lower):
+#                 return 'PROCEDURE', 0.85
         
-        return base_config
+#         # Priority 3: Legal Advisory (default for questions)
+#         confidence = 0.8 if needs_conclusion else 0.6
+#         return 'LEGAL_ADVISORY', confidence
+
+# class ContextMemory:
+#     """Bộ nhớ ngữ cảnh cho followup questions"""
+    
+#     def __init__(self, max_history: int = 3):
+#         self.max_history = max_history
+#         self.history = []
+    
+#     def add_query(self, query: str, features: QueryFeatures):
+#         self.history.append((query, features))
+#         if len(self.history) > self.max_history:
+#             self.history.pop(0)
+    
+#     def resolve_followup(self, query: str) -> str:
+#         if not self.history:
+#             return query
+        
+#         query_lower = query.lower().strip()
+#         followup_patterns = [r'^còn\s+', r'^vậy\s+', r'^thế\s+']
+        
+#         is_followup = any(re.match(pattern, query_lower) for pattern in followup_patterns)
+        
+#         if is_followup and self.history:
+#             last_query, last_features = self.history[-1]
+#             # Simple context addition
+#             if last_features.age_constraint:
+#                 return f"{query} {last_features.age_constraint}"
+#             elif last_features.legal_status:
+#                 return f"{query} {last_features.legal_status}"
+        
+#         return query
+
+# class VietnameseQueryClassifier:
+#     """Main classifier - phân tích ý định + yêu cầu để Vector tìm đúng quy định"""
+    
+#     def __init__(self):
+#         self.conclusion_detector = ConclusionDetector()
+#         self.direct_detector = DirectArticleDetector()
+#         self.constraint_detector = ConstraintDetector()
+#         self.intent_classifier = IntentClassifier()
+#         self.context_memory = ContextMemory()
+        
+#         self.stats = {
+#             'total_classifications': 0,
+#             'direct_article_count': 0,
+#             'legal_advisory_count': 0,
+#             'procedure_count': 0,
+#         }
+        
+#         logger.info("VietnameseQueryClassifier khởi tạo")
+
+#     def classify(self, question: str, chat_history: List[str] = None) -> QueryFeatures:
+#         """Phân tích ý định + yêu cầu công dân"""
+#         self.stats['total_classifications'] += 1
+        
+#         if not question or not question.strip():
+#             return self._create_empty_features()
+        
+#         original_query = question.strip()
+        
+#         # Step 1: Check direct article FIRST
+#         direct_article_info = self.direct_detector.detect_direct_article(original_query)
+#         has_direct_article = direct_article_info is not None
+        
+#         # Step 2: Check needs conclusion
+#         needs_conclusion = self.conclusion_detector.detect_needs_conclusion(original_query)
+        
+#         # Step 3: Resolve followup
+#         resolved_query = self.context_memory.resolve_followup(original_query)
+#         is_followup = resolved_query != original_query
+        
+#         # Step 4: Detect constraints (thông tin công dân)
+#         constraints = self.constraint_detector.detect_constraints(resolved_query)
+        
+#         # Step 5: Classify intent
+#         intent, confidence = self.intent_classifier.classify_intent(
+#             resolved_query, has_direct_article, needs_conclusion
+#         )
+        
+#         # Update stats
+#         if intent == 'DIRECT_ARTICLE':
+#             self.stats['direct_article_count'] += 1
+#         elif intent == 'LEGAL_ADVISORY':
+#             self.stats['legal_advisory_count'] += 1
+#         elif intent == 'PROCEDURE':
+#             self.stats['procedure_count'] += 1
+        
+#         # Step 6: Build keywords cho Vector search
+#         focus_keywords = self._build_focus_keywords(resolved_query, constraints, direct_article_info)
+#         enhanced_keywords = self._extract_enhanced_keywords(resolved_query, constraints)
+        
+#         # Step 7: Create features
+#         features = QueryFeatures(
+#             original_query=original_query,
+#             primary_intent=intent,
+#             subject_type=constraints['subject_type'],
+#             confidence=confidence,
+#             needs_conclusion=needs_conclusion,
+#             has_direct_article=has_direct_article,
+#             is_followup=is_followup,
+#             age_constraint=constraints['age_constraint'],
+#             legal_status=constraints['legal_status'],
+#             document_type=constraints['document_type'],
+#             purpose=constraints['purpose'],
+#             direct_article_info=direct_article_info,
+#             focus_keywords=focus_keywords,
+#             enhanced_keywords=enhanced_keywords,
+#             domains=['IMMIGRATION']
+#         )
+        
+#         # Add to context
+#         self.context_memory.add_query(original_query, features)
+        
+#         logger.debug(f"Classified: {intent} | confidence: {confidence:.2f} | "
+#                     f"direct_article: {has_direct_article} | needs_conclusion: {needs_conclusion}")
+        
+#         return features
+    
+#     def _build_focus_keywords(self, query: str, constraints: Dict, direct_article_info: Optional[Dict]) -> List[str]:
+#         """Build keywords cho Vector search"""
+#         keywords = []
+        
+#         # Direct article keywords
+#         if direct_article_info:
+#             if 'article' in direct_article_info:
+#                 keywords.append(f"điều {direct_article_info['article']}")
+#             if 'clause' in direct_article_info:
+#                 keywords.append(f"khoản {direct_article_info['clause']}")
+        
+#         # Constraint keywords
+#         for key in ['age_constraint', 'legal_status', 'document_type', 'purpose']:
+#             if constraints.get(key):
+#                 keywords.append(constraints[key])
+        
+#         # Query keywords
+#         query_words = re.findall(r'\b\w{3,}\b', query.lower())
+#         important_words = [w for w in query_words[:5] if w not in ['của', 'cho', 'và', 'có', 'được', 'thì', 'là']]
+#         keywords.extend(important_words)
+        
+#         return list(dict.fromkeys(keywords))[:8]
+    
+#     def _extract_enhanced_keywords(self, query: str, constraints: Dict) -> List[str]:
+#         """Extract enhanced keywords"""
+#         keywords = []
+        
+#         # Add constraint values
+#         for constraint_value in constraints.values():
+#             if constraint_value and isinstance(constraint_value, str):
+#                 keywords.append(constraint_value)
+        
+#         # Extract key terms from query
+#         key_terms = ['hộ chiếu', 'xuất cảnh', 'nhập cảnh', 'thủ tục', 'điều kiện', 'quy định']
+#         query_lower = query.lower()
+#         for term in key_terms:
+#             if term in query_lower:
+#                 keywords.append(term)
+        
+#         return list(dict.fromkeys(keywords))[:6]
+    
+#     def _create_empty_features(self) -> QueryFeatures:
+#         """Empty features for invalid input"""
+#         return QueryFeatures(
+#             original_query="",
+#             primary_intent="PROCEDURE",
+#             subject_type="VIETNAM_CITIZEN",
+#             confidence=0.3,
+#             needs_conclusion=False
+#         )
+    
+#     def get_stats(self) -> Dict[str, Any]:
+#         """Get classification statistics"""
+#         total = self.stats['total_classifications']
+#         return {
+#             'total_classifications': total,
+#             'intent_breakdown': {
+#                 'direct_article': self.stats['direct_article_count'],
+#                 'legal_advisory': self.stats['legal_advisory_count'],
+#                 'procedure': self.stats['procedure_count']
+#             },
+#             'intent_percentages': {
+#                 'direct_article': round(self.stats['direct_article_count'] / max(total, 1) * 100, 1),
+#                 'legal_advisory': round(self.stats['legal_advisory_count'] / max(total, 1) * 100, 1),
+#                 'procedure': round(self.stats['procedure_count'] / max(total, 1) * 100, 1)
+#             },
+#             'performance': {
+#             'avg_processing_time': 0.02,
+#             'success_rate': 1.0
+#             }
+#         }
+    
+#     def reset_context(self):
+#         self.context_memory.history.clear()
+#         logger.info("Context memory reset")
+    
+#     def reset_stats(self):
+#         self.stats = {
+#             'total_classifications': 0,
+#             'direct_article_count': 0,
+#             'legal_advisory_count': 0,
+#             'procedure_count': 0,
+#         }
+#         logger.info("Statistics reset")
+
+# # Helper functions
+# def test_conclusion_detection(queries: List[str]) -> Dict[str, Any]:
+#     classifier = VietnameseQueryClassifier()
+#     results = {}
+    
+#     for query in queries:
+#         features = classifier.classify(query)
+#         results[query] = {
+#             'needs_conclusion': features.needs_conclusion,
+#             'intent': features.primary_intent,
+#             'confidence': features.confidence
+#         }
+    
+#     return results
+
+# def test_direct_article_detection(queries: List[str]) -> Dict[str, Any]:
+#     detector = DirectArticleDetector()
+#     results = {}
+    
+#     for query in queries:
+#         result = detector.detect_direct_article(query)
+#         results[query] = result
+    
+#     return results

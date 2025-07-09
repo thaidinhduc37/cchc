@@ -1,7 +1,7 @@
 # DVC Chatbot - Công cụ hướng dẫn thủ tục Dịch vụ công
 
 ### ✅ Mô tả
-Chatbot này giúp hướng dẫn người dân thực hiện các thủ tục Dịch vụ công bằng cách trả lời từ dữ liệu PDF, DOCX, XLSX, TXT, JSON và sử dụng mô hình Genma:2B để trả lời tự nhiên.
+Chatbot này giúp hướng dẫn người dân thực hiện các thủ tục Dịch vụ công bằng cách trả lời từ dữ liệu DOCX, JSON và sử dụng mô hình Genma:2B để trả lời tự nhiên.
 
 ### 📦 Cài đặt
 1. Cài đặt các thư viện phụ thuộc:
@@ -15,11 +15,14 @@ Chatbot này giúp hướng dẫn người dân thực hiện các thủ tục D
      - `dataset/cancuoc/`
      - `dataset/hochieu/`
 
-3. Cấu hình mô hình Genma:2B trong `config/settings.yaml`.
+3. Build vector
+```bash
+python services/vector_rag/build_vector.py --domain xuatnhapcanh --build
+```
 
 ### 🚀 Chạy ứng dụng
 ```bash
-python main.py
+python app.py
 ```
 
 ### 🛠️ Tính năng

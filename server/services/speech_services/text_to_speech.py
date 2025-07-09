@@ -42,7 +42,7 @@ class TextToSpeech:
             return
 
         # Tốc độ nói chậm hơn để rõ ràng
-        self.engine.setProperty('rate', 160)
+        self.engine.setProperty('rate', 250)
         
         # Âm lượng tối đa
         self.engine.setProperty('volume', 1.0)

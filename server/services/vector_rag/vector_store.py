@@ -1,652 +1,1201 @@
-# server/services/vector_rag/vector_store.py  
+# server/services/vector_rag/vector_store.py - IMPROVED VERSION
 """
-Vector Store - REBUILT: Simple but smart legal search
+Vector Store - SMART: Tìm kiếm thông minh dựa trên query type
+Legal precise → Exact matching, Procedure → Enhanced search
 """
 import os
-import json
 import pickle
 import asyncio
-from typing import List, Dict, Any, Optional
+import time
+import re
+from typing import List, Dict, Any, Optional, Set, Tuple
 import logging
 from datetime import datetime
 import numpy as np
-import re
+from pathlib import Path
 
 try:
     import faiss
     FAISS_AVAILABLE = True
 except ImportError:
     FAISS_AVAILABLE = False
+    logging.warning("FAISS not available")
 
 from services.vector_rag.rag_config import config
-from services.vector_rag.document_processor import Document
+from services.vector_rag.document_processor import DocumentProcessor, Document
 from services.vector_rag.embeddings import VietnameseEmbeddingModel
 
 logger = logging.getLogger(__name__)
 
-class VectorStore:
-    """REBUILT: Smart vector store without hardcoded rules"""
+class VectorBuilder:
+    """🔨 Enhanced builder - giữ nguyên từ module gốc"""
     
     def __init__(self):
-        self.config = config
+        self.documents_path = config.documents_path
         self.embedding_model = VietnameseEmbeddingModel()
-        
-        # FAISS index
-        self.index = None
-        
-        # Document storage
-        self.documents = []
-        self.metadatas = []
-        self.dimension = self.embedding_model.dimension
+        self.storage_path = config.vector_store_path
         
         # File paths
-        self.vector_store_path = config.vector_store_path
-        self.index_file = os.path.join(self.vector_store_path, "faiss_index.bin")
-        self.docs_file = os.path.join(self.vector_store_path, "documents.pkl")
-        self.meta_file = os.path.join(self.vector_store_path, "metadata.pkl")
+        self.docs_file = os.path.join(self.storage_path, "documents.pkl")
+        self.meta_file = os.path.join(self.storage_path, "metadata.pkl")
+        self.index_file = os.path.join(self.storage_path, "faiss_index.bin")
         
-        # Settings
-        self.similarity_threshold = config.min_similarity_threshold
-        
-        # Stats
-        self.stats = {
-            'total_documents': 0,
-            'last_updated': None,
-            'embedding_model': config.embedding_model
-        }
-        
-        self._init_faiss()
-        
-    def _init_faiss(self):
-        """Initialize FAISS"""
-        if not FAISS_AVAILABLE:
-            raise ImportError("FAISS not installed. Run: pip install faiss-cpu")
+        logger.info("VectorBuilder initialized - enhanced mode")
+    
+    async def build_from_directory(self, documents_path: str = None) -> Dict[str, Any]:
+        """Enhanced build từ directory"""
+        try:
+            processor = DocumentProcessor()
+            
+            if documents_path:
+                logger.info(f"Building from {documents_path}")
+                documents = processor.process_directory(documents_path)
+            else:
+                logger.info(f"Building from documents directory")
+                documents = processor.process_directory(config.documents_path)
+            
+            if not documents:
+                return {'success': False, 'message': 'No documents processed'}
+            
+            return await self.build_from_documents(documents)
+            
+        except Exception as e:
+            logger.error(f"Build from directory failed: {e}")
+            return {'success': False, 'message': f'Build failed: {str(e)}'}
+    
+    async def build_from_documents(self, documents: List[Document]) -> Dict[str, Any]:
+        """Build process - simple and reliable"""
+        if not documents:
+            return {'success': False, 'message': 'No documents provided'}
         
         try:
-            if os.path.exists(self.index_file):
-                self._load_index()
-                logger.info(f"📂 Loaded vector store: {len(self.documents)} documents")
-            else:
-                self._create_new_index()
-                logger.info("✨ Created new FAISS index")
+            logger.info(f"Building vector database from {len(documents)} documents")
+            
+            # Process documents
+            contents = []
+            metadatas = []
+            qa_count = 0
+            legal_count = 0
+            law_units_found = []
+            
+            for i, doc in enumerate(documents):
+                if not doc or not hasattr(doc, 'content') or not doc.content:
+                    logger.warning(f"Document {i} is invalid - skipping")
+                    continue
+                    
+                content = doc.content.strip()
+                metadata = getattr(doc, 'metadata', {})
                 
+                if len(content) > 10:
+                    contents.append(content)
+                    metadatas.append(metadata)
+                    
+                    # Count content types
+                    content_type = metadata.get('content_type', 'unknown')
+                    if content_type == 'qa_entry':
+                        qa_count += 1
+                    elif content_type == 'legal_document':
+                        legal_count += 1
+                        law_unit = metadata.get('law_unit')
+                        if law_unit:
+                            law_units_found.append(law_unit)
+                else:
+                    logger.warning(f"Document {i} too short: {len(content)} chars")
+            
+            if not contents:
+                return {'success': False, 'message': 'No valid content after filtering'}
+            
+            logger.info(f"Content validation: {len(contents)}/{len(documents)} documents are valid")
+            logger.info(f"   Q&A entries: {qa_count}")
+            logger.info(f"   Legal documents: {legal_count}")
+            logger.info(f"   Law units found: {len(law_units_found)}")
+            
+            # Embedding generation
+            logger.info(f"Generating embeddings for {len(contents)} chunks")
+            embeddings = self.embedding_model.embed_documents(contents)
+            
+            if not embeddings or len(embeddings) != len(contents):
+                logger.error(f"Embedding mismatch: {len(embeddings)} embeddings for {len(contents)} contents")
+                return {'success': False, 'message': 'Embedding generation failed'}
+            
+            logger.info(f"Successfully generated {len(embeddings)} embeddings")
+            
+            # Build FAISS index
+            logger.info(f"Building FAISS index")
+            embeddings_array = np.array(embeddings, dtype=np.float32)
+            
+            if FAISS_AVAILABLE:
+                faiss.normalize_L2(embeddings_array)
+                dimension = embeddings_array.shape[1]
+                index = faiss.IndexFlatIP(dimension)
+                index.add(embeddings_array)
+                logger.info(f"FAISS index built: {index.ntotal} vectors, dimension {dimension}")
+            else:
+                index = None
+                dimension = len(embeddings[0]) if embeddings else 768
+                logger.warning("FAISS not available - using fallback")
+            
+            # Save
+            logger.info(f"Saving vector database")
+            os.makedirs(self.storage_path, exist_ok=True)
+            
+            # Atomic saves
+            temp_suffix = '.tmp'
+            
+            try:
+                # Save documents
+                with open(self.docs_file + temp_suffix, 'wb') as f:
+                    pickle.dump(contents, f)
+                os.replace(self.docs_file + temp_suffix, self.docs_file)
+                
+                # Save metadata
+                with open(self.meta_file + temp_suffix, 'wb') as f:
+                    pickle.dump(metadatas, f)
+                os.replace(self.meta_file + temp_suffix, self.meta_file)
+                
+                # Save FAISS index
+                if index and FAISS_AVAILABLE:
+                    faiss.write_index(index, self.index_file + temp_suffix)
+                    os.replace(self.index_file + temp_suffix, self.index_file)
+                
+            except Exception as e:
+                # Cleanup temp files
+                for temp_file in [self.docs_file + temp_suffix, self.meta_file + temp_suffix, 
+                                self.index_file + temp_suffix]:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                raise e
+            
+            # Stats
+            stats = {
+                'total_documents': len(contents),
+                'qa_entries': qa_count,
+                'legal_documents': legal_count,
+                'law_units_found': len(law_units_found),
+                'vectors': index.ntotal if index else len(contents),
+                'dimension': dimension,
+                'consistency_check': {
+                    'documents_count': len(contents),
+                    'embeddings_count': len(embeddings),
+                    'metadata_count': len(metadatas),
+                    'consistent': len(contents) == len(embeddings) == len(metadatas)
+                }
+            }
+            
+            logger.info(f"Build completed successfully!")
+            logger.info(f"   Documents: {stats['total_documents']}")
+            logger.info(f"   Vectors: {stats['vectors']}")
+            logger.info(f"   Q&A entries: {stats['qa_entries']}")
+            logger.info(f"   Legal documents: {stats['legal_documents']}")
+            logger.info(f"   Law units: {stats['law_units_found']}")
+            
+            return {
+                'success': True,
+                'message': f'Built vector database with {stats["total_documents"]} documents',
+                'stats': stats
+            }
+            
         except Exception as e:
-            logger.error(f"FAISS init failed: {e}")
-            self._create_new_index()
+            logger.error(f"Build failed: {e}")
+            return {'success': False, 'message': f'Build failed: {str(e)}'}
+
+class VectorSearcher:
+    """🔍 SMART search với logic thông minh dựa trên query type"""
     
-    def _create_new_index(self):
-        """Create new FAISS index"""
-        self.index = faiss.IndexFlatIP(self.dimension)
+    def __init__(self):
+        self.embedding_model = VietnameseEmbeddingModel()
+        self.storage_path = config.vector_store_path
+        
+        # Runtime data
         self.documents = []
         self.metadatas = []
-        logger.info(f"✨ Created FAISS index (dim: {self.dimension})")
+        self.faiss_index = None
+        
+        # File paths
+        self.docs_file = os.path.join(self.storage_path, "documents.pkl")
+        self.meta_file = os.path.join(self.storage_path, "metadata.pkl")
+        self.index_file = os.path.join(self.storage_path, "faiss_index.bin")
+        
+        # SMART search thresholds - điều chỉnh theo query type
+        self.thresholds = {
+            'legal_precise': 0.1,    # Cao hơn cho legal precise
+            'procedure': 0.2,        # Thấp hơn cho procedure
+            'consultation': 0.25,    # Trung bình cho consultation
+            'general': 0.2           # Thấp cho general
+        }
+        
+        self.qa_boost = 1.2         # Giảm boost, không quá aggressive
+        self.enhanced_mode = True
+        
+        # Smart search stats
+        self.stats = {
+            'total_searches': 0,
+            'avg_search_time': 0.0,
+            'legal_precise_searches': 0,
+            'procedure_searches': 0,
+            'consultation_searches': 0,
+            'qa_matches': 0,
+            'legal_matches': 0
+        }
+        
+        logger.info("VectorSearcher initialized with smart capabilities")
     
-    def _load_index(self):
-        """Load FAISS index and documents"""
+    async def initialize(self) -> Dict[str, Any]:
+        """Load vector database for search"""
         try:
-            self.index = faiss.read_index(self.index_file)
-            
+            # Load documents
             if os.path.exists(self.docs_file):
                 with open(self.docs_file, 'rb') as f:
                     self.documents = pickle.load(f)
             
+            # Load metadata
             if os.path.exists(self.meta_file):
                 with open(self.meta_file, 'rb') as f:
                     self.metadatas = pickle.load(f)
             
-            self._update_stats()
+            # Load FAISS index
+            if os.path.exists(self.index_file) and FAISS_AVAILABLE:
+                self.faiss_index = faiss.read_index(self.index_file)
             
-        except Exception as e:
-            logger.error(f"Load index failed: {e}")
-            self._create_new_index()
-    
-    def _save_index(self):
-        """Save FAISS index and documents"""
-        try:
-            os.makedirs(self.vector_store_path, exist_ok=True)
+            # Ensure consistency
+            if len(self.metadatas) < len(self.documents):
+                while len(self.metadatas) < len(self.documents):
+                    self.metadatas.append({})
+            elif len(self.metadatas) > len(self.documents):
+                self.metadatas = self.metadatas[:len(self.documents)]
             
-            faiss.write_index(self.index, self.index_file)
+            total_docs = len(self.documents)
+            total_vectors = self.faiss_index.ntotal if self.faiss_index else 0
             
-            with open(self.docs_file, 'wb') as f:
-                pickle.dump(self.documents, f)
+            if total_docs == 0:
+                return {'success': False, 'message': 'No documents in vector database'}
             
-            with open(self.meta_file, 'wb') as f:
-                pickle.dump(self.metadatas, f)
+            # Count document types
+            qa_count = sum(1 for meta in self.metadatas if meta.get('content_type') == 'qa_entry')
+            legal_count = total_docs - qa_count
             
-            self._update_stats()
-            logger.info(f"💾 Saved vector store: {len(self.documents)} documents")
-            
-        except Exception as e:
-            logger.error(f"Save index failed: {e}")
-    
-    def _update_stats(self):
-        """Update statistics"""
-        self.stats.update({
-            'total_documents': len(self.documents),
-            'last_updated': datetime.now().isoformat()
-        })
-    
-    async def initialize(self, force_rebuild: bool = False) -> Dict[str, Any]:
-        """Initialize vector store"""
-        try:
-            if force_rebuild:
-                logger.info("🗑️ Force rebuilding vector store...")
-                self._create_new_index()
-                self._save_index()
+            logger.info(f"✅ Smart loaded: {total_docs} docs ({qa_count} Q&A, {legal_count} legal), {total_vectors} vectors")
             
             return {
                 'success': True,
-                'message': f"Vector store initialized: {len(self.documents)} documents",
-                'stats': self.stats
+                'message': f'Smart vector database ready: {total_docs} docs',
+                'stats': {
+                    'documents': total_docs,
+                    'vectors': total_vectors,
+                    'qa_entries': qa_count,
+                    'legal_docs': legal_count,
+                    'smart_features': {
+                        'adaptive_thresholds': True,
+                        'query_type_detection': True,
+                        'content_priority': True
+                    }
+                }
             }
             
         except Exception as e:
-            logger.error(f"Initialize failed: {e}")
-            return {
-                'success': False,
-                'message': f"Initialize failed: {e}"
-            }
-    
-    async def add_documents(self, documents: List[Document]) -> bool:
-        """Add documents to vector store"""
-        if not documents:
-            return False
-        
+            logger.error(f"Smart initialize failed: {e}")
+            return {'success': False, 'message': f"Initialize failed: {e}"}
+
+    async def _legal_precise_search(self, query: str, k: int) -> List[Dict]:
+        """FIXED: Legal precise search với FAISS compatibility"""
         try:
-            logger.info(f"Adding {len(documents)} documents...")
-            
-            texts = []
-            doc_metadatas = []
-            
-            for doc in documents:
-                if doc.content.strip():
-                    texts.append(doc.content)
-                    doc_metadatas.append(doc.metadata)
-            
-            if not texts:
-                logger.warning("No valid texts to add")
-                return False
-            
-            logger.info("🧮 Generating embeddings...")
-            embeddings = self.embedding_model.embed_documents(texts)
-            
-            if not embeddings or len(embeddings) != len(texts):
-                logger.error("❌ Embedding generation failed")
-                return False
-            
-            embeddings_array = np.array(embeddings, dtype=np.float32)
-            faiss.normalize_L2(embeddings_array)
-            
-            self.index.add(embeddings_array)
-            self.documents.extend(texts)
-            self.metadatas.extend(doc_metadatas)
-            
-            self._save_index()
-            
-            logger.info(f"✅ Added {len(texts)} documents")
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ Add documents failed: {e}")
-            return False
-    
-    # MAIN SEARCH METHOD - REBUILT
-    async def search(self, query: str, k: int = None, 
-                    search_type: str = "normal",
-                    filter_metadata: Dict = None,
-                    query_entities: List[str] = None) -> List[Dict]:
-        """REBUILT: Smart search without hardcoded rules"""
-        k = k or config.search_k
-        
-        try:
-            if self.index.ntotal == 0:
-                logger.warning("Vector store is empty")
-                return []
-            
-            # Step 1: Analyze query to understand intent
-            query_analysis = self._analyze_query(query)
-            
-            # Step 2: Create search strategies based on analysis
-            search_strategies = self._create_search_strategies(query, query_analysis)
-            
-            # Step 3: Execute multiple searches
-            all_results = []
-            for strategy in search_strategies:
-                results = await self._execute_search_strategy(strategy, k)
-                all_results.extend(results)
-            
-            # Step 4: Merge and deduplicate
-            unique_results = self._merge_and_deduplicate(all_results)
-            
-            # Step 5: Smart ranking based on query intent
-            ranked_results = self._smart_ranking(unique_results, query, query_analysis)
-            
-            # Step 6: Apply entity filtering if provided
-            if query_entities:
-                ranked_results = self._filter_by_entities(ranked_results, query_entities)
-            
-            # Step 7: Apply metadata filtering
-            if filter_metadata:
-                ranked_results = [r for r in ranked_results 
-                                if self._match_metadata_filter(r.get('metadata', {}), filter_metadata)]
-            
-            logger.info(f"🔍 Search: {len(ranked_results)} results for '{query[:50]}...'")
-            return ranked_results[:k]
-            
-        except Exception as e:
-            logger.error(f"❌ Search failed: {e}")
-            return []
-    
-    def _analyze_query(self, query: str) -> Dict[str, Any]:
-        """Analyze query to understand legal intent"""
-        query_lower = query.lower()
-        
-        analysis = {
-            'legal_terms': [],
-            'entities': [],
-            'question_type': 'general',
-            'legal_domains': [],
-            'complexity': 'simple'
-        }
-        
-        # Extract legal terms
-        legal_patterns = {
-            'articles': r'điều\s+\d+[a-z]?',
-            'laws': r'luật\s+[^,\n]+',
-            'decrees': r'nghị\s*định\s+số\s+\d+',
-            'circulars': r'thông\s*tư\s+số\s+\d+',
-            'paragraphs': r'khoản\s+\d+',
-            'points': r'điểm\s+[a-z]+'
-        }
-        
-        for term_type, pattern in legal_patterns.items():
-            matches = re.findall(pattern, query_lower)
-            if matches:
-                analysis['legal_terms'].extend([(term_type, match) for match in matches])
-        
-        # Extract entities
-        entity_patterns = {
-            'people': r'(?:bị\s+(?:can|cáo|khởi\s+tố)|công\s+dân|người\s+nước\s+ngoài)',
-            'documents': r'(?:hộ\s+chiếu|thị\s+thực|visa|giấy\s+tờ)',
-            'actions': r'(?:xuất\s+cảnh|nhập\s+cảnh|tạm\s+hoãn|cấm|cấp)'
-        }
-        
-        for entity_type, pattern in entity_patterns.items():
-            matches = re.findall(pattern, query_lower)
-            if matches:
-                analysis['entities'].extend([(entity_type, match) for match in matches])
-        
-        # Determine question type
-        if any(word in query_lower for word in ['có được', 'được không', 'có thể']):
-            analysis['question_type'] = 'permission'
-        elif any(word in query_lower for word in ['điều kiện', 'yêu cầu']):
-            analysis['question_type'] = 'requirements'
-        elif any(word in query_lower for word in ['thủ tục', 'cách', 'làm thế nào']):
-            analysis['question_type'] = 'procedure'
-        elif any(word in query_lower for word in ['phí', 'lệ phí', 'bao nhiêu']):
-            analysis['question_type'] = 'cost'
-        elif any(word in query_lower for word in ['là gì', 'định nghĩa']):
-            analysis['question_type'] = 'definition'
-        
-        # Detect legal domains dynamically
-        domain_indicators = {
-            'criminal_law': ['khởi tố', 'bị can', 'bị cáo', 'tố tụng', 'hình sự'],
-            'immigration_citizens': ['xuất cảnh', 'nhập cảnh', 'công dân', 'hộ chiếu'],
-            'immigration_foreigners': ['người nước ngoài', 'thị thực', 'visa'],
-            'administrative': ['vi phạm hành chính', 'xử phạt']
-        }
-        
-        for domain, indicators in domain_indicators.items():
-            if any(indicator in query_lower for indicator in indicators):
-                analysis['legal_domains'].append(domain)
-        
-        # Determine complexity
-        if len(analysis['legal_terms']) > 2 or len(analysis['legal_domains']) > 1:
-            analysis['complexity'] = 'complex'
-        elif analysis['legal_terms'] or analysis['legal_domains']:
-            analysis['complexity'] = 'moderate'
-        
-        return analysis
-    
-    def _create_search_strategies(self, query: str, analysis: Dict) -> List[Dict]:
-        """Create search strategies based on query analysis"""
-        strategies = []
-        
-        # Strategy 1: Direct query search
-        strategies.append({
-            'type': 'direct',
-            'query': query,
-            'weight': 1.0
-        })
-        
-        # Strategy 2: Enhanced query with legal terms
-        if analysis['legal_terms']:
-            enhanced_terms = []
-            for term_type, term in analysis['legal_terms']:
-                enhanced_terms.append(term)
-            
-            enhanced_query = f"{query} {' '.join(enhanced_terms)}"
-            strategies.append({
-                'type': 'enhanced_legal',
-                'query': enhanced_query,
-                'weight': 1.2
-            })
-        
-        # Strategy 3: Domain-specific searches
-        for domain in analysis['legal_domains']:
-            domain_keywords = self._get_domain_keywords(domain)
-            domain_query = f"{query} {' '.join(domain_keywords[:3])}"
-            strategies.append({
-                'type': 'domain_specific',
-                'query': domain_query,
-                'domain': domain,
-                'weight': 0.8
-            })
-        
-        # Strategy 4: Entity-focused search
-        if analysis['entities']:
-            entity_terms = [term for _, term in analysis['entities']]
-            entity_query = f"{query} {' '.join(entity_terms)}"
-            strategies.append({
-                'type': 'entity_focused',
-                'query': entity_query,
-                'weight': 0.9
-            })
-        
-        # Strategy 5: Cross-domain search for complex queries
-        if analysis['complexity'] == 'complex' and len(analysis['legal_domains']) > 1:
-            cross_terms = []
-            for domain in analysis['legal_domains']:
-                cross_terms.extend(self._get_domain_keywords(domain)[:2])
-            
-            cross_query = f"{query} {' '.join(cross_terms)}"
-            strategies.append({
-                'type': 'cross_domain',
-                'query': cross_query,
-                'weight': 1.1
-            })
-        
-        return strategies
-    
-    def _get_domain_keywords(self, domain: str) -> List[str]:
-        """Get keywords for legal domain"""
-        domain_keywords = {
-            'criminal_law': ['tố tụng hình sự', 'bộ luật', 'điều tra', 'tạm hoãn', 'cấm'],
-            'immigration_citizens': ['luật xuất cảnh nhập cảnh', 'công dân việt nam', 'điều kiện'],
-            'immigration_foreigners': ['người nước ngoài', 'cư trú', 'tạm trú', 'thường trú'],
-            'administrative': ['vi phạm', 'xử phạt', 'hành chính']
-        }
-        
-        return domain_keywords.get(domain, [])
-    
-    async def _execute_search_strategy(self, strategy: Dict, k: int) -> List[Dict]:
-        """Execute a single search strategy"""
-        try:
-            query_embedding = self.embedding_model.embed_query(strategy['query'])
-            
+            # Embed query
+            query_embedding = self.embedding_model.embed_query(query)
             if not query_embedding:
                 return []
             
-            # Adjust search parameters based on strategy
-            search_k = k * 2 if strategy['type'] == 'direct' else k
-            threshold = self.similarity_threshold * 0.8 if strategy['type'] == 'cross_domain' else self.similarity_threshold
+            # CRITICAL FIX: Prepare query vector for FAISS
+            import numpy as np
             
-            # Perform vector search
-            query_vector = np.array([query_embedding], dtype=np.float32)
-            faiss.normalize_L2(query_vector)
+            # Convert to numpy array with correct dtype
+            query_vector = np.array(query_embedding, dtype=np.float32)
             
-            similarities, indices = self.index.search(query_vector, min(search_k, len(self.documents)))
+            # Ensure proper shape for FAISS (must be 2D)
+            if query_vector.ndim == 1:
+                query_vector = query_vector.reshape(1, -1)
+            
+            # Ensure contiguous array for FAISS
+            query_vector = np.ascontiguousarray(query_vector)
+            
+            # FIXED: Only normalize if model doesn't do it automatically
+            if not self.embedding_model.normalize_embeddings:
+                import faiss
+                # Make a copy to avoid modifying original
+                query_vector_norm = query_vector.copy()
+                faiss.normalize_L2(query_vector_norm)
+                query_vector = query_vector_norm
+            
+            # Search with FAISS
+            search_k = min(k * 3, self.faiss_index.ntotal)
+            similarities, indices = self.faiss_index.search(query_vector, search_k)
             
             results = []
+            threshold = 0.15  # Lower threshold for legal precise
+            
+            # Extract điều/khoản từ query để exact matching
+            query_lower = query.lower()
+            article_match = re.search(r'điều\s+(\d+[a-z]?)', query_lower)
+            paragraph_match = re.search(r'khoản\s+(\d+)', query_lower)
+            point_match = re.search(r'điểm\s+([a-z]+)', query_lower)
+            
+            target_article = article_match.group(1) if article_match else None
+            target_paragraph = paragraph_match.group(1) if paragraph_match else None
+            target_point = point_match.group(1) if point_match else None
+            
+            logger.debug(f"🎯 Legal precise: Looking for Điều {target_article}, Khoản {target_paragraph}, Điểm {target_point}")
+            
             for similarity, doc_idx in zip(similarities[0], indices[0]):
-                if doc_idx >= len(self.documents) or similarity < threshold:
+                if (doc_idx >= len(self.documents) or doc_idx < 0 or 
+                    similarity < threshold):
                     continue
                 
                 result = {
                     'content': self.documents[doc_idx],
                     'metadata': self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {},
                     'score': float(similarity),
-                    'strategy': strategy['type'],
-                    'strategy_weight': strategy['weight'],
-                    'index': int(doc_idx)
+                    'index': int(doc_idx),
+                    'search_type': 'legal_precise'
                 }
+                
+                # FIXED: Exact matching boost logic
+                content_lower = result['content'].lower()
+                law_unit = result['metadata'].get('law_unit', '')
+                exact_matches = []
+                boost_multiplier = 3.0
+                
+                # Check for exact article match
+                if target_article:
+                    # Check in content
+                    if f"điều {target_article}" in content_lower:
+                        boost_multiplier *= 1.5
+                        exact_matches.append(f'Điều {target_article}')
+                    
+                    # Check in law_unit (e.g., "15.2.a" contains article 15)
+                    if law_unit.startswith(f"{target_article}."):
+                        boost_multiplier *= 1.3
+                        exact_matches.append(f'Điều {target_article} (structure)')
+                
+                # Check for exact paragraph match
+                if target_paragraph:
+                    if f"khoản {target_paragraph}" in content_lower:
+                        boost_multiplier *= 1.4
+                        exact_matches.append(f'Khoản {target_paragraph}')
+                    
+                    # Check in law_unit (e.g., "15.2.a" contains paragraph 2)
+                    if f".{target_paragraph}." in law_unit or law_unit.endswith(f".{target_paragraph}"):
+                        boost_multiplier *= 1.2
+                        exact_matches.append(f'Khoản {target_paragraph} (structure)')
+                
+                # Check for exact point match
+                if target_point:
+                    if f"điểm {target_point}" in content_lower:
+                        boost_multiplier *= 1.3
+                        exact_matches.append(f'Điểm {target_point}')
+                    
+                    # Check in law_unit (e.g., "15.2.a" ends with point "a")
+                    if law_unit.endswith(f".{target_point}"):
+                        boost_multiplier *= 1.1
+                        exact_matches.append(f'Điểm {target_point} (structure)')
+                
+                # Apply boost
+                result['score'] *= boost_multiplier
+                
+                if exact_matches:
+                    result['exact_match'] = ', '.join(exact_matches)
+                    result['boost_applied'] = f'{boost_multiplier:.1f}x'
+                    logger.debug(f"📍 Exact match found: {exact_matches} → boost {boost_multiplier:.1f}x")
+                
+                # Priority for legal documents
+                if result['metadata'].get('content_type') == 'legal_document':
+                    result['score'] *= 1.1
+                    result['legal_priority'] = True
+                
+                # Update stats
+                if result['metadata'].get('content_type') == 'qa_entry':
+                    self.stats['qa_matches'] += 1
+                else:
+                    self.stats['legal_matches'] += 1
                 
                 results.append(result)
             
+            # Sort by boosted score for legal precise
+            results.sort(key=lambda x: x['score'], reverse=True)
+            
+            logger.debug(f"🎯 Legal precise results: {len(results)} total, top score: {results[0]['score']:.3f}" if results else "No results")
+            
+            return results[:k]
+            
+        except Exception as e:
+            logger.error(f"Legal precise search failed: {e}")
+            return []
+
+    async def _procedure_search(self, query: str, k: int) -> List[Dict]:
+        """FIXED: Procedure search với FAISS compatibility"""
+        try:
+            query_embedding = self.embedding_model.embed_query(query)
+            if not query_embedding:
+                return []
+            
+            # FAISS compatibility fix
+            import numpy as np
+            query_vector = np.array(query_embedding, dtype=np.float32).reshape(1, -1)
+            query_vector = np.ascontiguousarray(query_vector)
+            
+            if not self.embedding_model.normalize_embeddings:
+                import faiss
+                query_vector_norm = query_vector.copy()
+                faiss.normalize_L2(query_vector_norm)
+                query_vector = query_vector_norm
+            
+            search_k = min(k * 4, self.faiss_index.ntotal)
+            similarities, indices = self.faiss_index.search(query_vector, search_k)
+            
+            results = []
+            threshold = self.thresholds['procedure']
+            
+            for similarity, doc_idx in zip(similarities[0], indices[0]):
+                if (doc_idx >= len(self.documents) or doc_idx < 0 or 
+                    similarity < threshold):
+                    continue
+                
+                result = {
+                    'content': self.documents[doc_idx],
+                    'metadata': self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {},
+                    'score': float(similarity),
+                    'index': int(doc_idx),
+                    'search_type': 'procedure'
+                }
+                
+                # SMART boost cho Q&A entries trong procedure searches
+                if result['metadata'].get('content_type') == 'qa_entry':
+                    result['score'] *= self.qa_boost
+                    result['boosted'] = 'qa_procedure'
+                    self.stats['qa_matches'] += 1
+                else:
+                    self.stats['legal_matches'] += 1
+                
+                results.append(result)
+            
+            # Smart mixing: ưu tiên Q&A nhưng vẫn giữ legal docs
+            qa_results = [r for r in results if r['metadata'].get('content_type') == 'qa_entry']
+            legal_results = [r for r in results if r['metadata'].get('content_type') != 'qa_entry']
+            
+            # Sort each type by score
+            qa_results.sort(key=lambda x: x['score'], reverse=True)
+            legal_results.sort(key=lambda x: x['score'], reverse=True)
+            
+            # Mix: 60% Q&A, 40% legal cho procedure questions
+            qa_slots = min(int(k * 0.6), len(qa_results))
+            legal_slots = k - qa_slots
+            
+            final_results = qa_results[:qa_slots] + legal_results[:legal_slots]
+            final_results.sort(key=lambda x: x['score'], reverse=True)
+            
+            return final_results[:k]
+            
+        except Exception as e:
+            logger.error(f"Procedure search failed: {e}")
+            return []
+
+    async def _consultation_search(self, query: str, k: int) -> List[Dict]:
+        """CONSULTATION: Tìm kiếm cho câu hỏi tư vấn - cân bằng Q&A và legal"""
+        try:
+            # Embed query với moderate processing
+            query_embedding = self.embedding_model.embed_query(query)
+            if not query_embedding:
+                return []
+            
+            # FAISS search với threshold trung bình
+            query_vector = np.array([query_embedding], dtype=np.float32)
+            faiss.normalize_L2(query_vector)
+            
+            search_k = min(k * 3, self.faiss_index.ntotal)
+            similarities, indices = self.faiss_index.search(query_vector, search_k)
+            
+            results = []
+            threshold = self.thresholds['consultation']
+            
+            for similarity, doc_idx in zip(similarities[0], indices[0]):
+                if (doc_idx >= len(self.documents) or doc_idx < 0 or 
+                    similarity < threshold):
+                    continue
+                
+                result = {
+                    'content': self.documents[doc_idx],
+                    'metadata': self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {},
+                    'score': float(similarity),
+                    'index': int(doc_idx),
+                    'search_type': 'consultation'
+                }
+                
+                # Moderate boost cho Q&A
+                if result['metadata'].get('content_type') == 'qa_entry':
+                    result['score'] *= 1.1  # Nhẹ hơn procedure
+                    result['boosted'] = 'qa_consultation'
+                    self.stats['qa_matches'] += 1
+                else:
+                    self.stats['legal_matches'] += 1
+                
+                results.append(result)
+            
+            # Sort by score
+            results.sort(key=lambda x: x['score'], reverse=True)
+            return results[:k]
+            
+        except Exception as e:
+            logger.error(f"Consultation search failed: {e}")
+            return []
+
+    async def _general_search(self, query: str, k: int) -> List[Dict]:
+        """GENERAL: Tìm kiếm chung - balanced approach"""
+        try:
+            # Embed query với minimal processing
+            query_embedding = self.embedding_model.embed_query(query)
+            if not query_embedding:
+                return []
+            
+            # Standard FAISS search
+            query_vector = np.array([query_embedding], dtype=np.float32)
+            faiss.normalize_L2(query_vector)
+            
+            search_k = min(k * 2, self.faiss_index.ntotal)
+            similarities, indices = self.faiss_index.search(query_vector, search_k)
+            
+            results = []
+            threshold = self.thresholds['general']
+            
+            for similarity, doc_idx in zip(similarities[0], indices[0]):
+                if (doc_idx >= len(self.documents) or doc_idx < 0 or 
+                    similarity < threshold):
+                    continue
+                
+                result = {
+                    'content': self.documents[doc_idx],
+                    'metadata': self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {},
+                    'score': float(similarity),
+                    'index': int(doc_idx),
+                    'search_type': 'general'
+                }
+                
+                # No boost for general search - keep original scores
+                if result['metadata'].get('content_type') == 'qa_entry':
+                    self.stats['qa_matches'] += 1
+                else:
+                    self.stats['legal_matches'] += 1
+                
+                results.append(result)
+            
+            # Sort by original similarity score
+            results.sort(key=lambda x: x['score'], reverse=True)
+            return results[:k]
+            
+        except Exception as e:
+            logger.error(f"General search failed: {e}")
+            return []
+    
+    def _classify_query_type(self, query: str) -> str:
+        """SỬA LOGIC: Classify query type để áp dụng search strategy phù hợp"""
+        query_lower = query.lower()
+        
+        # LEGAL PRECISE: Hỏi về điều, khoản, điểm cụ thể
+        legal_precise_patterns = [
+            r'điều\s+\d+[a-z]?',
+            r'khoản\s+\d+',
+            r'điểm\s+[a-z]+',
+            r'(điều|khoản|điểm).*?(nói về|quy định|là gì|có nội dung)'
+        ]
+        
+        for pattern in legal_precise_patterns:
+            if re.search(pattern, query_lower):
+                return 'legal_precise'
+        
+        # PROCEDURE: Hỏi về thủ tục, quy trình
+        procedure_patterns = [
+            r'thủ tục.*?(như thế nào|thế nào|ra sao)',
+            r'quy trình.*?(làm|cấp|xin)',
+            r'làm.*?(hộ chiếu|thị thực|giấy tờ)',
+            r'cần.*?(gì|những gì|điều kiện)',
+            r'hồ sơ.*?(gồm|bao gồm)'
+        ]
+        
+        for pattern in procedure_patterns:
+            if re.search(pattern, query_lower):
+                return 'procedure'
+        
+        # CONSULTATION: Hỏi tư vấn điều kiện, được phép
+        consultation_patterns = [
+            r'có.*?được.*?không',
+            r'được phép.*?không',
+            r'điều kiện.*?để',
+            r'trường hợp.*?nào',
+            r'có thể.*?không'
+        ]
+        
+        for pattern in consultation_patterns:
+            if re.search(pattern, query_lower):
+                return 'consultation'
+        
+        return 'general'
+
+    async def search(self, query: str, query_features=None, k: int = 10) -> List[Dict]:
+        """SỬA LOGIC CHÍNH: Smart search dựa trên query type"""
+        start_time = time.time()
+        self.stats['total_searches'] += 1
+        
+        if not query or len(query.strip()) < 3:
+            return []
+        
+        if not self.documents:
+            logger.warning("No documents loaded")
+            return []
+        
+        try:
+            # STEP 1: Classify query type
+            query_type = self._classify_query_type(query)
+            logger.debug(f"🧠 Query type: {query_type} for '{query[:50]}...'")
+            
+            # Update stats
+            if query_type == 'legal_precise':
+                self.stats['legal_precise_searches'] += 1
+            elif query_type == 'procedure':
+                self.stats['procedure_searches'] += 1
+            elif query_type == 'consultation':
+                self.stats['consultation_searches'] += 1
+            
+            # STEP 2: Apply smart search strategy
+            if query_type == 'legal_precise':
+                results = await self._legal_precise_search(query, k)
+            elif query_type == 'procedure':
+                results = await self._procedure_search(query, k)
+            elif query_type == 'consultation':
+                results = await self._consultation_search(query, k)
+            else:
+                results = await self._general_search(query, k)
+            
+            # STEP 3: Post-process results
+            results = self._post_process_results(results, query_type, query)
+            
+            # Update stats
+            search_time = time.time() - start_time
+            self._update_search_stats(search_time, results)
+            
+            logger.debug(f"✅ Smart search ({query_type}): {len(results)} results in {search_time:.3f}s")
+            
             return results
             
         except Exception as e:
-            logger.error(f"Strategy execution failed: {e}")
+            logger.error(f"Smart search failed: {e}")
             return []
-    
-    def _merge_and_deduplicate(self, all_results: List[Dict]) -> List[Dict]:
-        """Merge results from different strategies and remove duplicates"""
-        seen_indices = set()
-        unique_results = []
-        
-        # Sort by strategy weight first
-        all_results.sort(key=lambda x: x.get('strategy_weight', 0), reverse=True)
-        
-        for result in all_results:
-            doc_index = result.get('index')
-            if doc_index not in seen_indices:
-                seen_indices.add(doc_index)
-                unique_results.append(result)
-        
-        return unique_results
-    
-    def _smart_ranking(self, results: List[Dict], query: str, analysis: Dict) -> List[Dict]:
-        """Smart ranking based on query analysis"""
-        query_lower = query.lower()
-        
-        for result in results:
-            content_lower = result['content'].lower()
-            base_score = result['score']
-            bonus_score = 0.0
+
+    async def _legal_precise_search(self, query: str, k: int) -> List[Dict]:
+        """LEGAL PRECISE: Tìm kiếm chính xác cho câu hỏi pháp lý cụ thể"""
+        try:
+            # Embed query với minimal processing
+            query_embedding = self.embedding_model.embed_query(query)
+            if not query_embedding:
+                return []
             
-            # Bonus for legal term matches
-            for term_type, term in analysis['legal_terms']:
-                if term in content_lower:
-                    if term_type == 'articles':
-                        bonus_score += 0.3  # High bonus for specific articles
-                    elif term_type == 'laws':
-                        bonus_score += 0.2
-                    else:
-                        bonus_score += 0.1
+            # FAISS search với threshold thấp hơn (FIXED)
+            query_vector = np.array([query_embedding], dtype=np.float32)
+            faiss.normalize_L2(query_vector)
             
-            # Bonus for entity matches
-            for entity_type, entity in analysis['entities']:
-                if entity in content_lower:
-                    if entity_type == 'people':
-                        bonus_score += 0.2
-                    elif entity_type == 'actions':
-                        bonus_score += 0.15
-                    else:
-                        bonus_score += 0.1
+            # Search với k lớn hơn để có nhiều candidates
+            search_k = min(k * 3, self.faiss_index.ntotal)
+            similarities, indices = self.faiss_index.search(query_vector, search_k)
             
-            # Bonus for question type relevance
-            if analysis['question_type'] == 'permission':
-                permission_indicators = ['được', 'không được', 'có thể', 'cấm', 'cho phép']
-                permission_matches = sum(1 for indicator in permission_indicators if indicator in content_lower)
-                bonus_score += permission_matches * 0.1
+            results = []
+            threshold = 0.15  # FIXED: Lower threshold for legal precise
             
-            elif analysis['question_type'] == 'requirements':
-                requirement_indicators = ['điều kiện', 'yêu cầu', 'phải', 'cần']
-                requirement_matches = sum(1 for indicator in requirement_indicators if indicator in content_lower)
-                bonus_score += requirement_matches * 0.1
+            # Extract điều/khoản từ query để exact matching
+            query_lower = query.lower()
+            article_match = re.search(r'điều\s+(\d+[a-z]?)', query_lower)
+            paragraph_match = re.search(r'khoản\s+(\d+)', query_lower)
+            point_match = re.search(r'điểm\s+([a-z]+)', query_lower)
             
-            # Strategy weight bonus
-            strategy_bonus = (result.get('strategy_weight', 1.0) - 1.0) * 0.1
+            target_article = article_match.group(1) if article_match else None
+            target_paragraph = paragraph_match.group(1) if paragraph_match else None
+            target_point = point_match.group(1) if point_match else None
             
-            # Calculate final score
-            result['final_score'] = base_score + bonus_score + strategy_bonus
-            result['bonus_breakdown'] = {
-                'legal_terms': sum(0.1 for _, term in analysis['legal_terms'] if term in content_lower),
-                'entities': sum(0.1 for _, entity in analysis['entities'] if entity in content_lower),
-                'question_type': bonus_score - sum(0.1 for _, term in analysis['legal_terms'] if term in content_lower) - sum(0.1 for _, entity in analysis['entities'] if entity in content_lower),
-                'strategy': strategy_bonus
-            }
-        
-        # Sort by final score
-        results.sort(key=lambda x: x['final_score'], reverse=True)
-        return results
-    
-    def _filter_by_entities(self, results: List[Dict], query_entities: List[str]) -> List[Dict]:
-        """Filter results by entity relevance"""
-        if not query_entities:
+            logger.debug(f"🎯 Legal precise: Looking for Điều {target_article}, Khoản {target_paragraph}, Điểm {target_point}")
+            
+            for similarity, doc_idx in zip(similarities[0], indices[0]):
+                if (doc_idx >= len(self.documents) or doc_idx < 0 or 
+                    similarity < threshold):
+                    continue
+                
+                result = {
+                    'content': self.documents[doc_idx],
+                    'metadata': self.metadatas[doc_idx] if doc_idx < len(self.metadatas) else {},
+                    'score': float(similarity),
+                    'index': int(doc_idx),
+                    'search_type': 'legal_precise'
+                }
+                
+                # FIXED: Exact matching boost logic
+                content_lower = result['content'].lower()
+                law_unit = result['metadata'].get('law_unit', '')
+                exact_matches = []
+                boost_multiplier = 1.0
+                
+                # Check for exact article match
+                if target_article:
+                    # Check in content
+                    if f"điều {target_article}" in content_lower:
+                        boost_multiplier *= 1.5
+                        exact_matches.append(f'Điều {target_article}')
+                    
+                    # Check in law_unit (e.g., "15.2.a" contains article 15)
+                    if law_unit.startswith(f"{target_article}."):
+                        boost_multiplier *= 1.3
+                        exact_matches.append(f'Điều {target_article} (structure)')
+                
+                # Check for exact paragraph match
+                if target_paragraph:
+                    if f"khoản {target_paragraph}" in content_lower:
+                        boost_multiplier *= 1.4
+                        exact_matches.append(f'Khoản {target_paragraph}')
+                    
+                    # Check in law_unit (e.g., "15.2.a" contains paragraph 2)
+                    if f".{target_paragraph}." in law_unit or law_unit.endswith(f".{target_paragraph}"):
+                        boost_multiplier *= 1.2
+                        exact_matches.append(f'Khoản {target_paragraph} (structure)')
+                
+                # Check for exact point match
+                if target_point:
+                    if f"điểm {target_point}" in content_lower:
+                        boost_multiplier *= 1.3
+                        exact_matches.append(f'Điểm {target_point}')
+                    
+                    # Check in law_unit (e.g., "15.2.a" ends with point "a")
+                    if law_unit.endswith(f".{target_point}"):
+                        boost_multiplier *= 1.1
+                        exact_matches.append(f'Điểm {target_point} (structure)')
+                
+                # Apply boost
+                result['score'] *= boost_multiplier
+                
+                if exact_matches:
+                    result['exact_match'] = ', '.join(exact_matches)
+                    result['boost_applied'] = f'{boost_multiplier:.1f}x'
+                    logger.debug(f"📍 Exact match found: {exact_matches} → boost {boost_multiplier:.1f}x")
+                
+                # Priority for legal documents
+                if result['metadata'].get('content_type') == 'legal_document':
+                    result['score'] *= 1.1  # Small boost for legal docs in legal precise search
+                    result['legal_priority'] = True
+                
+                # Update stats
+                if result['metadata'].get('content_type') == 'qa_entry':
+                    self.stats['qa_matches'] += 1
+                else:
+                    self.stats['legal_matches'] += 1
+                
+                results.append(result)
+            
+            # Sort by boosted score for legal precise
+            results.sort(key=lambda x: x['score'], reverse=True)
+            
+            logger.debug(f"🎯 Legal precise results: {len(results)} total, top score: {results[0]['score']:.3f}" if results else "No results")
+            
+            return results[:k]
+            
+        except Exception as e:
+            logger.error(f"Legal precise search failed: {e}")
+            return []
+
+    def _post_process_results(self, results: List[Dict], query_type: str, query: str) -> List[Dict]:
+        """Post-process results based on query type"""
+        if not results:
             return results
         
+        # Remove duplicates based on content similarity
+        seen_indices = set()
         filtered_results = []
         
         for result in results:
-            content_lower = result['content'].lower()
-            entity_matches = sum(1 for entity in query_entities if entity.lower() in content_lower)
-            
-            # Keep results with at least some entity matches
-            if entity_matches > 0:
-                result['entity_match_score'] = entity_matches / len(query_entities)
+            idx = result.get('index')
+            if idx not in seen_indices:
+                seen_indices.add(idx)
+                
+                # Add query type info to metadata
+                result['query_type'] = query_type
+                
+                # Add relevance explanation for legal precise
+                if query_type == 'legal_precise' and result.get('exact_match'):
+                    result['relevance_reason'] = f"Exact match: {result['exact_match']}"
+                elif result.get('boosted'):
+                    result['relevance_reason'] = f"Enhanced for {query_type}: {result['boosted']}"
+                
                 filtered_results.append(result)
         
         return filtered_results
-    
-    def _match_metadata_filter(self, metadata: Dict, filter_criteria: Dict) -> bool:
-        """Check if metadata matches filter criteria"""
-        for key, value in filter_criteria.items():
-            if key not in metadata:
-                return False
+
+    def _update_search_stats(self, search_time: float, results: List[Dict]):
+        """Update search statistics"""
+        total = self.stats['total_searches']
+        current_avg = self.stats['avg_search_time']
+        self.stats['avg_search_time'] = (current_avg * (total - 1) + search_time) / total
+
+    async def search_with_content_priority(self, query: str, k: int = 5, query_features=None) -> List[Dict]:
+        """Content priority search - delegate to smart search"""
+        return await self.search(query, query_features, k)
+
+    async def search_by_intent(self, query: str, intent_data: dict, k: int = 5) -> List[Dict]:
+        """Intent-aware search - enhanced with smart logic"""
+        try:
+            # Extract intent information
+            query_type = self._classify_query_type(query)
             
-            if isinstance(value, list):
-                if metadata[key] not in value:
-                    return False
+            # Override with intent data if provided
+            if intent_data:
+                if intent_data.get('is_procedure', False):
+                    query_type = 'procedure'
+                elif intent_data.get('needs_conclusion', False):
+                    query_type = 'consultation'
+                elif intent_data.get('has_specific_article', False):
+                    query_type = 'legal_precise'
+            
+            # Use appropriate search strategy
+            if query_type == 'legal_precise':
+                return await self._legal_precise_search(query, k)
+            elif query_type == 'procedure':
+                return await self._procedure_search(query, k)
+            elif query_type == 'consultation':
+                return await self._consultation_search(query, k)
             else:
-                if metadata[key] != value:
-                    return False
-        
-        return True
-    
-    # COMPREHENSIVE SEARCH FOR COMPLEX QUERIES
-    async def search_comprehensive(self, query: str, k: int = None) -> List[Dict]:
-        """Comprehensive search for complex legal queries"""
-        k = k or config.search_k
-        
-        try:
-            # Analyze query complexity
-            analysis = self._analyze_query(query)
-            
-            if analysis['complexity'] == 'simple':
-                # Use regular search for simple queries
-                return await self.search(query, k=k)
-            
-            # For complex queries, use expanded search
-            expanded_k = k * 3
-            
-            # Create comprehensive search strategies
-            strategies = self._create_search_strategies(query, analysis)
-            
-            # Add additional semantic variations
-            semantic_variations = self._generate_semantic_variations(query, analysis)
-            for variation in semantic_variations:
-                strategies.append({
-                    'type': 'semantic_variation',
-                    'query': variation,
-                    'weight': 0.7
-                })
-            
-            # Execute all strategies
-            all_results = []
-            for strategy in strategies:
-                results = await self._execute_search_strategy(strategy, expanded_k // len(strategies))
-                all_results.extend(results)
-            
-            # Advanced processing for comprehensive results
-            unique_results = self._merge_and_deduplicate(all_results)
-            ranked_results = self._smart_ranking(unique_results, query, analysis)
-            
-            # Additional filtering for comprehensive search
-            filtered_results = self._filter_comprehensive_results(ranked_results, query, analysis)
-            
-            logger.info(f"🔍 Comprehensive search: {len(filtered_results)} results")
-            return filtered_results[:k*2]  # Return more results for comprehensive search
-            
+                return await self._general_search(query, k)
+                
         except Exception as e:
-            logger.error(f"❌ Comprehensive search failed: {e}")
-            return await self.search(query, k=k)
-    
-    def _generate_semantic_variations(self, query: str, analysis: Dict) -> List[str]:
-        """Generate semantic variations of the query"""
-        variations = []
-        
-        # Synonym replacement
-        synonyms = {
-            'có được': ['được phép', 'có thể', 'được'],
-            'bị khởi tố': ['bị truy tố', 'bị điều tra', 'bị can'],
-            'xuất cảnh': ['ra nước ngoài', 'đi nước ngoài'],
-            'điều kiện': ['yêu cầu', 'quy định']
-        }
-        
-        query_lower = query.lower()
-        for original, replacements in synonyms.items():
-            if original in query_lower:
-                for replacement in replacements:
-                    variation = query_lower.replace(original, replacement)
-                    variations.append(variation)
-        
-        # Add context variations based on legal domains
-        for domain in analysis['legal_domains']:
-            domain_keywords = self._get_domain_keywords(domain)
-            for keyword in domain_keywords[:2]:
-                variations.append(f"{query} {keyword}")
-        
-        return variations[:5]  # Limit variations
-    
-    def _filter_comprehensive_results(self, results: List[Dict], query: str, analysis: Dict) -> List[Dict]:
-        """Additional filtering for comprehensive search results"""
-        # Remove very low relevance results
-        min_score = 0.1 if analysis['complexity'] == 'complex' else 0.15
-        
-        filtered = []
-        for result in results:
-            if result['final_score'] >= min_score:
-                filtered.append(result)
-        
-        return filtered
-    
-    # UTILITY METHODS
-    async def similarity_search_with_threshold(self, query: str, threshold: float = None) -> List[Dict]:
-        """Search with custom similarity threshold"""
-        original_threshold = self.similarity_threshold
-        
-        if threshold is not None:
-            self.similarity_threshold = threshold
-        
-        try:
-            results = await self.search(query)
-            return results
-        finally:
-            self.similarity_threshold = original_threshold
-    
+            logger.error(f"Intent-aware search failed: {e}")
+            return await self.search(query, None, k)
+
+    async def search_by_subject_priority(self, query: str, subject_type=None, k: int = 5, 
+                                       focus_keywords=None, query_features=None) -> List[Dict]:
+        """Subject priority search - use smart search"""
+        return await self.search(query, query_features, k)
+
     def get_stats(self) -> Dict[str, Any]:
-        """Get vector store statistics"""
-        index_size_mb = 0
-        if os.path.exists(self.index_file):
-            index_size_mb = os.path.getsize(self.index_file) / (1024 * 1024)
+        """Get smart search statistics"""
+        total_searches = self.stats['total_searches']
         
         return {
-            'total_documents': len(self.documents),
-            'embedding_model': self.stats['embedding_model'],
-            'dimension': self.dimension,
-            'similarity_threshold': self.similarity_threshold,
-            'index_size_mb': round(index_size_mb, 2),
-            'last_updated': self.stats.get('last_updated'),
-            'faiss_index_type': str(type(self.index).__name__) if self.index else 'None'
+            'documents_loaded': len(self.documents),
+            'faiss_vectors': self.faiss_index.ntotal if self.faiss_index else 0,
+            'search_performance': {
+                'total_searches': total_searches,
+                'avg_search_time': round(self.stats['avg_search_time'], 3),
+                'qa_matches': self.stats['qa_matches'],
+                'legal_matches': self.stats['legal_matches']
+            },
+            'smart_search_breakdown': {
+                'legal_precise_searches': self.stats['legal_precise_searches'],
+                'procedure_searches': self.stats['procedure_searches'],
+                'consultation_searches': self.stats['consultation_searches'],
+                'legal_precise_ratio': self.stats['legal_precise_searches'] / max(total_searches, 1),
+                'procedure_ratio': self.stats['procedure_searches'] / max(total_searches, 1),
+                'consultation_ratio': self.stats['consultation_searches'] / max(total_searches, 1)
+            },
+            'smart_settings': {
+                'thresholds': self.thresholds,
+                'qa_boost': self.qa_boost,
+                'enhanced_mode': self.enhanced_mode
+            },
+            'smart_features': {
+                'query_type_classification': True,
+                'adaptive_thresholds': True,
+                'content_type_boosting': True,
+                'legal_precise_matching': True,
+                'procedure_qa_priority': True,
+                'consultation_balancing': True
+            }
+        }
+
+class VectorStore:
+    """🎛️ Smart controller với improved components"""
+    
+    def __init__(self):
+        self.builder = VectorBuilder()
+        self.searcher = VectorSearcher()
+        
+        self.is_building = False
+        self.is_initialized = False
+        self.build_lock = asyncio.Lock()
+        
+        self.stats = {
+            'builds_completed': 0,
+            'searches_performed': 0,
+            'smart_searches_performed': 0,
+            'last_build_time': None,
+            'last_search_time': None
+        }
+        
+        logger.info("Smart VectorStore controller initialized")
+    
+    async def initialize(self) -> Dict[str, Any]:
+        """Initialize smart vector store for search"""
+        if self.is_building:
+            return {'success': False, 'message': 'Building in progress, please wait'}
+        
+        try:
+            result = await self.searcher.initialize()
+            self.is_initialized = result['success']
+            
+            if result['success']:
+                logger.info(f"✅ Smart VectorStore initialized successfully")
+            else:
+                logger.error(f"❌ Smart VectorStore initialization failed: {result.get('message')}")
+                
+            return result
+        except Exception as e:
+            logger.error(f"Smart VectorStore initialization failed: {e}")
+            return {'success': False, 'message': f'Initialization failed: {str(e)}'}
+    
+    async def build_if_needed(self, documents_path: str = None, force_rebuild: bool = False) -> Dict[str, Any]:
+        """Build smart vector database if needed"""
+        async with self.build_lock:
+            if self.is_building:
+                return {'success': False, 'message': 'Build already in progress'}
+            
+            if not force_rebuild and self._vector_database_exists():
+                return {'success': True, 'message': 'Smart vector database exists (use force_rebuild=True to rebuild)'}
+            
+            try:
+                self.is_building = True
+                self.is_initialized = False
+                
+                logger.info("🔨 Starting smart vector database build...")
+                result = await self.builder.build_from_directory(documents_path)
+                
+                if result['success']:
+                    self.stats['builds_completed'] += 1
+                    self.stats['last_build_time'] = datetime.now().isoformat()
+                    
+                    # Auto-initialize after successful build
+                    logger.info("🔄 Auto-initializing smart system after build...")
+                    init_result = await self.initialize()
+                    
+                    if not init_result['success']:
+                        logger.warning(f"Smart build succeeded but initialization failed: {init_result.get('message')}")
+                
+                return result
+                
+            except Exception as e:
+                logger.error(f"Smart build failed: {e}")
+                return {'success': False, 'message': f'Build failed: {str(e)}'}
+            finally:
+                self.is_building = False
+    
+    async def search(self, query: str, query_features=None, k: int = 10) -> List[Dict]:
+        """Smart search với automatic query type detection"""
+        if self.is_building:
+            logger.warning("Search blocked: Building in progress")
+            return []
+        
+        if not self.is_initialized:
+            logger.info("Auto-initializing for smart search...")
+            init_result = await self.initialize()
+            if not init_result['success']:
+                logger.warning("Smart search failed: Could not initialize")
+                return []
+        
+        try:
+            self.stats['searches_performed'] += 1
+            self.stats['smart_searches_performed'] += 1
+            self.stats['last_search_time'] = datetime.now().isoformat()
+            
+            results = await self.searcher.search(query, query_features, k)
+            
+            logger.debug(f"🧠 Smart search '{query[:50]}...' returned {len(results)} results")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Smart search failed: {e}")
+            return []
+
+    # Smart search methods
+    async def search_with_content_priority(self, query: str, k: int = 5, query_features=None) -> List[Dict]:
+        """Smart content priority search"""
+        return await self.searcher.search_with_content_priority(query, k, query_features)
+
+    async def search_by_intent(self, query: str, intent_data: dict, k: int = 5) -> List[Dict]:
+        """Smart intent-aware search"""
+        return await self.searcher.search_by_intent(query, intent_data, k)
+    
+    def _vector_database_exists(self) -> bool:
+        """Check if smart vector database exists"""
+        required_files = [
+            self.builder.docs_file,
+            self.builder.meta_file
+        ]
+        
+        return all(os.path.exists(f) for f in required_files)
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get comprehensive smart health status"""
+        builder_stats = {
+            'storage_path': self.builder.storage_path,
+            'files_exist': self._vector_database_exists()
+        }
+        
+        searcher_stats = self.searcher.get_stats() if self.is_initialized else {}
+        
+        return {
+            'system_status': {
+                'is_building': self.is_building,
+                'is_initialized': self.is_initialized,
+                'database_exists': builder_stats['files_exist'],
+                'faiss_available': FAISS_AVAILABLE,
+                'smart_features_enabled': True
+            },
+            'builder_stats': builder_stats,
+            'searcher_stats': searcher_stats,
+            'overall_stats': self.stats,
+            'storage_info': {
+                'storage_path': self.builder.storage_path,
+                'files': {
+                    'documents': os.path.exists(self.builder.docs_file),
+                    'metadata': os.path.exists(self.builder.meta_file),
+                    'faiss_index': os.path.exists(self.builder.index_file)
+                }
+            },
+            'smart_improvements': {
+                'query_type_classification': True,
+                'adaptive_search_strategies': True,
+                'legal_precise_matching': True,
+                'procedure_qa_priority': True,
+                'consultation_balancing': True,
+                'content_type_boosting': True,
+                'smart_thresholds': True
+            },
+            'performance': {
+                'builds_completed': self.stats['builds_completed'],
+                'searches_performed': self.stats['searches_performed'],
+                'smart_searches_performed': self.stats['smart_searches_performed'],
+                'last_build_time': self.stats['last_build_time'],
+                'last_search_time': self.stats['last_search_time']
+            },
+            'recommendations': self._get_smart_health_recommendations()
         }
     
-    def clear_store(self):
-        """Clear vector store"""
-        self._create_new_index()
+    def _get_smart_health_recommendations(self) -> List[str]:
+        """Get smart health recommendations"""
+        recommendations = []
         
-        for file_path in [self.index_file, self.docs_file, self.meta_file]:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        if not self._vector_database_exists():
+            recommendations.append("Build smart vector database first")
         
-        logger.info("🗑️ Vector store cleared")
+        if not FAISS_AVAILABLE and self.searcher.documents and len(self.searcher.documents) > 1000:
+            recommendations.append("Install FAISS for better performance with large smart datasets")
+        
+        if self.is_initialized and self.searcher.stats['total_searches'] > 0:
+            avg_time = self.searcher.stats['avg_search_time']
+            if avg_time > 1.0:
+                recommendations.append("Smart search time is slow - consider optimizing")
+        
+        # Smart-specific recommendations
+        if self.is_initialized:
+            searcher_stats = self.searcher.get_stats()
+            legal_precise_ratio = searcher_stats['smart_search_breakdown']['legal_precise_ratio']
+            
+            if legal_precise_ratio > 0.5:
+                recommendations.append("High legal precise queries - system optimized for exact matching")
+            elif legal_precise_ratio < 0.1:
+                recommendations.append("Low legal precise queries - consider promoting specific legal references")
+        
+        if not recommendations:
+            recommendations.append("Smart system is healthy with all intelligent features enabled")
+        
+        return recommendations
+    
+    # Backward compatibility methods
+    async def hybrid_search(self, query: str, k: int = 10) -> List[Dict]:
+        """Smart backward compatibility wrapper"""
+        return await self.search(query, None, k)
+    
+    async def vector_search(self, query: str, k: int = 10) -> List[Dict]:
+        """Smart backward compatibility wrapper"""
+        return await self.search(query, None, k)
+    
+    async def search_by_subject_priority(self, query: str, subject_type=None, k: int = 5, 
+                                        focus_keywords=None, query_features=None) -> List[Dict]:
+        """Smart backward compatibility wrapper"""
+        return await self.searcher.search_by_subject_priority(query, subject_type, k, focus_keywords, query_features)
+    
+    def clear_cache(self):
+        """Clear smart caches"""
+        if hasattr(self.searcher.embedding_model, 'clear_cache'):
+            self.searcher.embedding_model.clear_cache()
+        
+        logger.info("Smart caches cleared")
+    
+    def get_comprehensive_stats(self) -> Dict[str, Any]:
+        """Get comprehensive statistics for smart system"""
+        health = self.get_health_status()
+        
+        detailed_stats = {
+            'smart_vector_store_info': {
+                'version': 'Smart Vietnamese Legal Vector Store v5.0',
+                'document_processor_version': 'Smart Legal RAG v1.0',
+                'key_improvements': [
+                    'Query type classification (legal_precise, procedure, consultation)',
+                    'Adaptive search thresholds per query type',
+                    'Smart content type boosting',
+                    'Legal precise exact matching',
+                    'Procedure Q&A priority',
+                    'Consultation balanced approach',
+                    'DEk21 model optimization'
+                ]
+            },
+            'query_type_support': {
+                'legal_precise': {
+                    'description': 'Điều/Khoản/Điểm specific queries',
+                    'strategy': 'High threshold + exact matching',
+                    'boost_factor': 1.5,
+                    'examples': ['Khoản 2 điều 15 nói về gì', 'Điều 20 quy định thế nào']
+                },
+                'procedure': {
+                    'description': 'Thủ tục/quy trình queries',
+                    'strategy': 'Q&A priority + enhanced processing',
+                    'boost_factor': 1.2,
+                    'examples': ['Thủ tục làm hộ chiếu', 'Quy trình xin visa']
+                },
+                'consultation': {
+                    'description': 'Tư vấn điều kiện queries',
+                    'strategy': 'Balanced Q&A + legal docs',
+                    'boost_factor': 1.1,
+                    'examples': ['Có được xuất cảnh không', 'Điều kiện để làm gì']
+                },
+                'general': {
+                    'description': 'General queries',
+                    'strategy': 'Standard search',
+                    'boost_factor': 1.0,
+                    'examples': ['Thông tin về visa', 'Hộ chiếu là gì']
+                }
+            },
+            'smart_architecture': {
+                'components': ['VectorBuilder (enhanced)', 'VectorSearcher (smart)', 'VectorStore (smart)'],
+                'embedding_model': self.searcher.embedding_model.model_name if hasattr(self.searcher.embedding_model, 'model_name') else 'DEk21 Vietnamese Model',
+                'search_approach': 'Query classification → Strategy selection → Adaptive search → Smart boosting',
+                'thresholds': self.searcher.thresholds if hasattr(self.searcher, 'thresholds') else 'Smart adaptive',
+                'features': [
+                    'Query type auto-detection',
+                    'Adaptive similarity thresholds',
+                    'Content type aware boosting',
+                    'Legal structure exact matching',
+                    'Q&A priority for procedures',
+                    'Smart result mixing'
+                ]
+            },
+            'performance_optimizations': {
+                'legal_precise': 'High threshold (0.3) + exact article/paragraph matching',
+                'procedure': 'Q&A boost (1.2x) + 60/40 Q&A/legal mixing',
+                'consultation': 'Moderate boost (1.1x) + balanced approach',
+                'general': 'Standard search with optimal thresholds'
+            }
+        }
+        
+        return {**health, **detailed_stats}
+
+# Smart backward compatible alias
+SmartVectorStore = VectorStore 

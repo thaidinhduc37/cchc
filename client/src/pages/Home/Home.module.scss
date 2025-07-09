@@ -1,0 +1,380 @@
+// Home.module.scss - Light Theme with Orange
+
+.home {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fff5f0 0%, #ffe5d9 50%, #ffdbcc 100%);
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+// =================== HERO SECTION ===================
+.hero {
+    padding: 80px 0 60px;
+    text-align: center;
+    position: relative;
+    background: linear-gradient(135deg, #F4E4D6 0%, #F0D0B8 100%);
+    color: #8B4513;
+    overflow: hidden;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: 
+            radial-gradient(circle at 25% 25%, rgba(206, 122, 88, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 75% 25%, rgba(210, 105, 30, 0.12) 0%, transparent 40%),
+            radial-gradient(circle at 50% 75%, rgba(139, 69, 19, 0.08) 0%, transparent 60%);
+    }
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(206, 122, 88, 0.05) 50%,
+                transparent 100%
+            ),
+            linear-gradient(
+                0deg,
+                transparent 0%,
+                rgba(210, 105, 30, 0.03) 50%,
+                transparent 100%
+            );
+        animation: subtleGlow 4s ease-in-out infinite alternate;
+    }
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(139, 69, 19, 0.1);
+    border: 1px solid rgba(139, 69, 19, 0.2);
+    border-radius: 50px;
+    padding: 8px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    animation: float 3s ease-in-out infinite;
+    
+    svg {
+        color: #CE7A58;
+    }
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    background: #FFE4B5;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+
+
+.hero-title {
+    font-size: 4.5rem;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    color: #CE7A58;
+    
+    .subtitle {
+        display: block;
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        margin-top: 16px;
+    }
+}
+
+.hero-desc {
+    font-size: 1.6rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0;
+}
+
+// =================== SEARCH SECTION ===================
+.search-section {
+    margin-top: -30px;
+    padding-bottom: 40px;
+    position: relative;
+    z-index: 10;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 2px solid #CE7A58;
+    border-radius: 60px;
+    padding: 6px 6px 6px 20px;
+    max-width: 700px;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 30px rgba(206, 122, 88, 0.15);
+    
+    &:focus-within {
+        border-color: #D2691E;
+        box-shadow: 0 0 20px rgba(210, 105, 30, 0.3);
+    }
+}
+
+.search-icon {
+    color: #CE7A58;
+    font-size: 18px;
+    margin-right: 12px;
+}
+
+.search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #333;
+    font-size: 15px;
+    padding: 14px 0;
+    
+    &::placeholder {
+        color: #999;
+    }
+}
+
+.search-btn {
+    background: linear-gradient(135deg, #CE7A58 0%, #D2691E 100%);
+    border: none;
+    border-radius: 50px;
+    color: white;
+    padding: 14px 28px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(206, 122, 88, 0.4);
+    }
+}
+
+// =================== SERVICES SECTION ===================
+.services {
+    padding: 40px 0 60px;
+    background: #fafafa;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 40px;
+    color: #CE7A58;
+}
+
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.service-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: white;
+    border: 2px solid #f0f0f0;
+    border-radius: 16px;
+    padding: 20px 24px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    
+    &:hover {
+        transform: translateY(-4px);
+        border-color: #CE7A58;
+        box-shadow: 0 10px 30px rgba(206, 122, 88, 0.15);
+        
+        .card-arrow {
+            transform: translateX(6px);
+        }
+    }
+    
+    &.ai-special {
+        border-color: #CE7A58;
+        background: linear-gradient(135deg, rgba(206, 122, 88, 0.05) 0%, rgba(210, 105, 30, 0.05) 100%);
+    }
+}
+
+.card-emoji {
+    font-size: 1.8rem;
+}
+
+.card-text {
+    flex: 1;
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+}
+
+.card-arrow {
+    color: #999;
+    transition: transform 0.3s ease;
+    font-size: 14px;
+}
+
+.ai-tag {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: linear-gradient(135deg, #CE7A58 0%, #D2691E 100%);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(206, 122, 88, 0.4);
+}
+
+// =================== FOOTER ===================
+.footer {
+    background: #CE7A58;
+    padding: 24px 0;
+    color: white;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    
+    svg {
+        color: #FFE4B5;
+        font-size: 18px;
+    }
+}
+
+.footer-info {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+}
+
+// =================== ANIMATIONS ===================
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes subtleGlow {
+    0% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+// =================== RESPONSIVE ===================
+@media (max-width: 768px) {
+    .container {
+        padding: 0 16px;
+    }
+    
+    .hero {
+        padding: 60px 0 40px;
+    }
+    
+    .services {
+        padding: 30px 0 40px;
+    }
+    
+    .services-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .search-box {
+        flex-direction: column;
+        padding: 12px;
+        border-radius: 20px;
+        gap: 12px;
+    }
+    
+    .search-input {
+        width: 100%;
+        text-align: center;
+        padding: 12px 0;
+    }
+    
+    .search-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 24px;
+    }
+    
+    .service-card {
+        padding: 16px 20px;
+        
+        .card-emoji {
+            font-size: 1.5rem;
+        }
+        
+        .card-text {
+            font-size: 14px;
+        }
+    }
+    
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .section-title {
+        font-size: 1.8rem;
+    }
+}

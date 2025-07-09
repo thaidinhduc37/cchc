@@ -1,0 +1,14 @@
+@charset "UTF-8";
+.wrapper {
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Thêm thanh cuộn dọc */
+  overflow-x: hidden; /* Ẩn thanh cuộn ngang nếu có */
+}
+
+.container {
+  flex: 1; /* Đảm bảo container chiếm toàn bộ không gian còn lại */
+  overflow-y: auto; /* Thêm thanh cuộn dọc cho container */
+  overflow-x: hidden; /* Ẩn thanh cuộn ngang nếu có */
+}/*# sourceMappingURL=DefaultLayout.module.css.map */

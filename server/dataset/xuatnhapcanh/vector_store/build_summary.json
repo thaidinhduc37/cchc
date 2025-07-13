@@ -1,0 +1,172 @@
+{
+  "build_session": {
+    "build_id": "20250710_201648",
+    "start_time": "2025-07-10T20:16:48.574891",
+    "approach": "Legal Article Extraction + DOCX Q&A",
+    "domain": "xuatnhapcanh",
+    "embedding_model": "huyydangg/DEk21_hcmute_embedding",
+    "end_time": "2025-07-10T20:17:47.979633",
+    "duration_seconds": 59.404742,
+    "success": true
+  },
+  "file_details": [
+    {
+      "timestamp": "20:16:48",
+      "filename": "47-2019-QH14.docx",
+      "file_size_bytes": 56132,
+      "processing_time": 0.15379858016967773,
+      "file_path": "dataset\\xuatnhapcanh\\documents\\47-2019-QH14.docx",
+      "file_size": 56132,
+      "chunks_created": 297,
+      "total_content_length": 105682,
+      "content_type": "legal_document",
+      "articles_found": 0,
+      "paragraphs_found": 0,
+      "points_found": 0,
+      "qa_pairs_found": 0,
+      "avg_question_length": 0,
+      "avg_answer_length": 0,
+      "doc_category": "unknown",
+      "authority_level": "unknown",
+      "cross_references": {
+        "articles": [
+          "20",
+          "12",
+          "5",
+          "45",
+          "33",
+          "3",
+          "41",
+          "23",
+          "26",
+          "27",
+          "10",
+          "22",
+          "34",
+          "51",
+          "2",
+          "48",
+          "38",
+          "47",
+          "46",
+          "13",
+          "43",
+          "18",
+          "1",
+          "40",
+          "8",
+          "11",
+          "4",
+          "17",
+          "16",
+          "39",
+          "52",
+          "49",
+          "21",
+          "7",
+          "19",
+          "25",
+          "36",
+          "28",
+          "29",
+          "24",
+          "44",
+          "50",
+          "37",
+          "15",
+          "35",
+          "42",
+          "6",
+          "31",
+          "32",
+          "30",
+          "9",
+          "14"
+        ],
+        "laws": [],
+        "decrees": [],
+        "circulars": []
+      }
+    },
+    {
+      "timestamp": "20:16:48",
+      "filename": "hoi_dap_xuat_nhap_canh.docx",
+      "file_size_bytes": 33459,
+      "processing_time": 0.06941032409667969,
+      "file_path": "dataset\\xuatnhapcanh\\documents\\hoi_dap_xuat_nhap_canh.docx",
+      "file_size": 33459,
+      "chunks_created": 42,
+      "total_content_length": 23186,
+      "content_type": "qa_entry",
+      "articles_found": 0,
+      "paragraphs_found": 0,
+      "points_found": 0,
+      "qa_pairs_found": 42,
+      "avg_question_length": 0,
+      "avg_answer_length": 0,
+      "doc_category": "unknown",
+      "authority_level": "unknown",
+      "cross_references": {
+        "articles": [
+          "8",
+          "5",
+          "16",
+          "15",
+          "7",
+          "19",
+          "18",
+          "14"
+        ],
+        "laws": [],
+        "decrees": [],
+        "circulars": [
+          "56/2021/tt-bca"
+        ]
+      }
+    }
+  ],
+  "legal_extraction": {
+    "total_articles": 0,
+    "total_paragraphs": 0,
+    "total_points": 0,
+    "documents_processed": 1,
+    "law_documents": 0,
+    "decree_documents": 0,
+    "circular_documents": 0
+  },
+  "qa_extraction": {
+    "total_qa_pairs": 42,
+    "documents_processed": 1,
+    "avg_question_length": 0,
+    "avg_answer_length": 0
+  },
+  "cross_references": {
+    "total_refs_found": 61,
+    "article_refs": 60,
+    "law_refs": 0,
+    "decree_refs": 0,
+    "circular_refs": 1
+  },
+  "chunk_statistics": {
+    "total_chunks_created": 339,
+    "legal_chunks": 297,
+    "qa_chunks": 42,
+    "avg_chunk_length": 380.14159292035396
+  },
+  "embedding_stats": {
+    "total_embeddings": 339,
+    "successful_embeddings": 339,
+    "failed_embeddings": 0,
+    "avg_confidence": 0.9800000000000008,
+    "total_embedding_time": 55.35584259033203
+  },
+  "build_stats": {
+    "start_time": "2025-07-10 20:16:48.574891",
+    "domain": "xuatnhapcanh",
+    "files_processed": 2,
+    "total_chunks": 339,
+    "build_time": 59.40323352813721
+  },
+  "errors": [],
+  "warnings": []
+}

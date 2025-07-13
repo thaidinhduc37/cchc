@@ -36,34 +36,104 @@ class AccuracyAnalyzer:
         }
     
     def analyze_accuracy(self, query: str, content: str, query_features: Any = None) -> Dict[str, Any]:
-        """Phân tích độ chính xác thay vì similarity"""
+        """
+        ENHANCED: Add conversation context to existing accuracy analysis
+        """
         query_lower = query.lower()
         content_lower = content.lower()
         
         accuracy = {
-            'intent_match': 0.0,      # Query intent khớp với content type
-            'structure_match': 0.0,   # Legal structure accuracy
-            'content_relevance': 0.0, # Content trả lời đúng câu hỏi
-            'precision_score': 0.0,   # Overall precision
-            'is_primary_answer': False # Đây có phải đáp án chính không
+            'intent_match': 0.0,
+            'structure_match': 0.0, 
+            'content_relevance': 0.0,
+            'precision_score': 0.0,
+            'is_primary_answer': False,
+            'conversation_boost': 0.0  # NEW: conversation context boost
         }
         
-        # 1. Intent matching - QUAN TRỌNG NHẤT
+        # === EXISTING LOGIC (unchanged) ===
         accuracy['intent_match'] = self._check_intent_accuracy(query_lower, content_lower, query_features)
-        
-        # 2. Structure matching - Đúng điều luật
         accuracy['structure_match'] = self._check_structure_accuracy(query_lower, content_lower, query_features)
-        
-        # 3. Content relevance - Trả lời đúng câu hỏi
         accuracy['content_relevance'] = self._check_content_accuracy(query_lower, content_lower)
         
-        # 4. Calculate precision score
-        accuracy['precision_score'] = self._calculate_precision(accuracy)
+        # === NEW: CONVERSATION CONTEXT BOOST ===
+        if query_features and hasattr(query_features, 'conversation_context'):
+            accuracy['conversation_boost'] = self._calculate_conversation_boost(content_lower, query_features)
         
-        # 5. Determine if this is primary answer
+        # === ENHANCED PRECISION CALCULATION ===
+        accuracy['precision_score'] = self._calculate_precision_with_conversation(accuracy)
         accuracy['is_primary_answer'] = self._is_primary_answer(accuracy, query_features)
         
         return accuracy
+
+    def _calculate_conversation_boost(self, content: str, query_features: Any) -> float:
+        """
+        NEW METHOD: Calculate conversation context boost
+        """
+        boost_score = 0.0
+        
+        # 1. TOPIC THREAD CONTINUITY
+        if hasattr(query_features, 'topic_thread'):
+            topic_thread = query_features.topic_thread
+            if topic_thread and topic_thread in content:
+                boost_score += 0.15
+                logger.debug(f"🔗 Topic thread boost: {topic_thread}")
+        
+        # 2. CITIZEN PROFILE BOOST
+        if hasattr(query_features, 'citizen_profile'):
+            citizen_profile = query_features.citizen_profile
+            
+            # Location boost
+            location = citizen_profile.get('location')
+            if location and location.lower() in content:
+                boost_score += 0.12
+                logger.debug(f"📍 Location boost: {location}")
+            
+            # Age group boost  
+            age_group = citizen_profile.get('age_group')
+            if age_group == 'minor' and any(term in content for term in ['trẻ em', 'dưới 14']):
+                boost_score += 0.10
+            elif age_group == 'elderly' and any(term in content for term in ['cao tuổi', 'người già']):
+                boost_score += 0.08
+            
+            # Passport status boost
+            passport_status = citizen_profile.get('passport_status')
+            if passport_status == 'not_have' and any(term in content for term in ['lần đầu', 'chưa có']):
+                boost_score += 0.10
+            elif passport_status == 'expired' and any(term in content for term in ['cấp lại', 'hết hạn']):
+                boost_score += 0.10
+        
+        # 3. CONVERSATION HISTORY BOOST
+        if hasattr(query_features, 'conversation_context'):
+            conversation_context = getattr(query_features, 'conversation_context', '')
+            if conversation_context:
+                # Simple keyword matching from conversation
+                context_terms = ['hộ chiếu', 'visa', 'xuất cảnh', 'nhập cảnh', 'thủ tục']
+                matching_terms = sum(1 for term in context_terms if term in conversation_context.lower() and term in content)
+                if matching_terms > 0:
+                    boost_score += min(matching_terms * 0.05, 0.12)
+        
+        return min(boost_score, 0.30)  # Max 0.30 conversation boost
+
+    def _calculate_precision_with_conversation(self, accuracy: Dict[str, float]) -> float:
+        """
+        ENHANCED: Include conversation boost in precision calculation
+        """
+        weights = {
+            'intent_match': 0.4,        # 40% - Most important
+            'structure_match': 0.25,    # 25% - Legal structure  
+            'content_relevance': 0.2,   # 20% - Content relevance
+            'conversation_boost': 0.15  # 15% - NEW: Conversation context
+        }
+        
+        precision = (
+            accuracy['intent_match'] * weights['intent_match'] +
+            accuracy['structure_match'] * weights['structure_match'] +
+            accuracy['content_relevance'] * weights['content_relevance'] +
+            accuracy['conversation_boost'] * weights['conversation_boost']
+        )
+        
+        return min(max(precision, 0.0), 1.0)
     
     def _check_intent_accuracy(self, query: str, content: str, query_features: Any) -> float:
         """Check if content matches query intent - MOST IMPORTANT"""
@@ -183,23 +253,6 @@ class AccuracyAnalyzer:
                 concepts.add(term)
         
         return concepts
-    
-    def _calculate_precision(self, accuracy: Dict[str, float]) -> float:
-        """Calculate overall precision score"""
-        # Intent matching is most important for accuracy
-        weights = {
-            'intent_match': 0.5,      # 50% - Most important
-            'structure_match': 0.3,   # 30% - Legal structure
-            'content_relevance': 0.2  # 20% - Content relevance
-        }
-        
-        precision = (
-            accuracy['intent_match'] * weights['intent_match'] +
-            accuracy['structure_match'] * weights['structure_match'] +
-            accuracy['content_relevance'] * weights['content_relevance']
-        )
-        
-        return min(max(precision, 0.0), 1.0)
     
     def _is_primary_answer(self, accuracy: Dict[str, float], query_features: Any) -> bool:
         """Determine if this is the primary answer to the query"""

@@ -638,7 +638,10 @@ class VectorSearcher:
         return 'general'
 
     async def search(self, query: str, query_features=None, k: int = 10) -> List[Dict]:
-        """SỬA LOGIC CHÍNH: Smart search dựa trên query type"""
+        """
+        ENHANCED SEARCH: Smart search + conversation context integration
+        🎯 Combine existing smart search với conversation context enhancement
+        """
         start_time = time.time()
         self.stats['total_searches'] += 1
         
@@ -650,9 +653,15 @@ class VectorSearcher:
             return []
         
         try:
-            # STEP 1: Classify query type
-            query_type = self._classify_query_type(query)
-            logger.debug(f"🧠 Query type: {query_type} for '{query[:50]}...'")
+            # STEP 1: ENHANCE QUERY với conversation context (NEW)
+            enhanced_query = query
+            if query_features and query_features.get('has_context'):
+                enhanced_query = self._enhance_query_with_features(query, query_features)
+                logger.debug(f"🔗 Query enhanced with context: '{query}' → '{enhanced_query}'")
+            
+            # STEP 2: CLASSIFY enhanced query type (existing logic)
+            query_type = self._classify_query_type(enhanced_query)
+            logger.debug(f"🧠 Query type: {query_type} for '{enhanced_query[:50]}...'")
             
             # Update stats
             if query_type == 'legal_precise':
@@ -662,30 +671,219 @@ class VectorSearcher:
             elif query_type == 'consultation':
                 self.stats['consultation_searches'] += 1
             
-            # STEP 2: Apply smart search strategy
+            # STEP 3: Apply smart search strategy với enhanced query
             if query_type == 'legal_precise':
-                results = await self._legal_precise_search(query, k)
+                results = await self._legal_precise_search(enhanced_query, k * 2)
             elif query_type == 'procedure':
-                results = await self._procedure_search(query, k)
+                results = await self._procedure_search(enhanced_query, k * 2)
             elif query_type == 'consultation':
-                results = await self._consultation_search(query, k)
+                results = await self._consultation_search(enhanced_query, k * 2)
             else:
-                results = await self._general_search(query, k)
+                results = await self._general_search(enhanced_query, k * 2)
             
-            # STEP 3: Post-process results
-            results = self._post_process_results(results, query_type, query)
+            # STEP 4: CONTEXT-AWARE POST-PROCESSING (NEW)
+            if query_features and query_features.get('has_context'):
+                # Apply conversation context filtering
+                results = self._apply_context_filtering(results, query, query_features)
+                # Apply conversation boosting
+                results = self._apply_conversation_boosting(results, query_features)
+            else:
+                # Fallback to existing post-processing
+                results = self._post_process_results(results, query_type, query)
+            
+            # STEP 5: Final result selection
+            final_results = results[:k]
             
             # Update stats
             search_time = time.time() - start_time
-            self._update_search_stats(search_time, results)
+            self._update_search_stats(search_time, final_results)
             
-            logger.debug(f"✅ Smart search ({query_type}): {len(results)} results in {search_time:.3f}s")
+            context_used = query_features.get('has_context', False) if query_features else False
+            logger.debug(f"✅ Enhanced search ({query_type}): {len(final_results)} results in {search_time:.3f}s, context: {context_used}")
             
-            return results
+            return final_results
             
         except Exception as e:
-            logger.error(f"Smart search failed: {e}")
+            logger.error(f"Enhanced search failed: {e}")
             return []
+
+    def _enhance_query_with_features(self, original_query: str, query_features: Dict[str, Any]) -> str:
+        """
+        NEW METHOD: Enhance query với conversation context
+        """
+        if not query_features:
+            return original_query
+        
+        enhanced_parts = [original_query]
+        
+        # 1. TOPIC THREAD từ conversation
+        topic_thread = query_features.get('topic_thread')
+        if topic_thread and topic_thread not in original_query.lower():
+            enhanced_parts.append(topic_thread)
+        
+        # 2. CONVERSATION CONTEXT keywords
+        conversation_context = query_features.get('conversation_context', '')
+        if conversation_context:
+            context_keywords = self._extract_context_keywords(conversation_context)
+            for keyword in context_keywords[:2]:  # Top 2 keywords only
+                if keyword not in original_query.lower():
+                    enhanced_parts.append(keyword)
+        
+        # 3. CITIZEN PROFILE entities
+        citizen_profile = query_features.get('citizen_profile', {})
+        
+        # Location context
+        location = citizen_profile.get('location')
+        if location and any(loc_word in original_query.lower() for loc_word in ['ở đâu', 'tại đâu', 'thì sao']):
+            enhanced_parts.append(f"tại {location}")
+        
+        # Age group context
+        age_group = citizen_profile.get('age_group')
+        if age_group == 'minor':
+            enhanced_parts.append("trẻ em")
+        elif age_group == 'elderly':
+            enhanced_parts.append("người cao tuổi")
+        
+        # Document status context
+        passport_status = citizen_profile.get('passport_status')
+        if passport_status == 'not_have' and 'làm' in original_query.lower():
+            enhanced_parts.append("lần đầu")
+        elif passport_status == 'expired':
+            enhanced_parts.append("cấp lại")
+        
+        # 4. BOOST CONFIG từ admin_units.json
+        boost_config = query_features.get('boost_config', {})
+        if boost_config:
+            boost_terms = boost_config.get('context_boost_terms', [])
+            for term in boost_terms[:1]:  # Only 1 boost term
+                if term not in original_query.lower():
+                    enhanced_parts.append(term)
+        
+        enhanced_query = ' '.join(enhanced_parts)
+        return enhanced_query
+
+    def _extract_context_keywords(self, conversation_context: str) -> List[str]:
+        """Extract important keywords from conversation context"""
+        if not conversation_context:
+            return []
+        
+        important_terms = []
+        context_lower = conversation_context.lower()
+        
+        # Priority legal terms
+        priority_terms = ['hộ chiếu', 'visa', 'xuất cảnh', 'nhập cảnh', 'lệ phí', 'thủ tục', 'cấp lại']
+        for term in priority_terms:
+            if term in context_lower and term not in important_terms:
+                important_terms.append(term)
+        
+        return important_terms[:3]  # Max 3 terms
+
+    def _apply_context_filtering(self, search_results: List[Dict], original_query: str, query_features: Dict[str, Any]) -> List[Dict]:
+        """
+        NEW METHOD: Apply conversation context filtering
+        """
+        if not query_features or not search_results:
+            return search_results
+        
+        filtered_results = []
+        
+        # Get context info
+        citizen_profile = query_features.get('citizen_profile', {})
+        topic_thread = query_features.get('topic_thread', '')
+        context_summary = query_features.get('context_summary', {})
+        
+        for result in search_results:
+            content = result.get('content', '').lower()
+            relevance_score = result.get('score', 0.5)
+            
+            # 1. TOPIC THREAD BOOST
+            if topic_thread and topic_thread in content:
+                relevance_score += 0.15
+            
+            # 2. LOCATION RELEVANCE
+            location = citizen_profile.get('location')
+            if location:
+                location_lower = location.lower()
+                if location_lower in content or location_lower.replace(' ', '') in content:
+                    relevance_score += 0.1
+            
+            # 3. AGE GROUP RELEVANCE
+            age_group = citizen_profile.get('age_group')
+            if age_group == 'minor' and any(term in content for term in ['trẻ em', 'dưới 14', 'chưa đủ']):
+                relevance_score += 0.12
+            elif age_group == 'elderly' and any(term in content for term in ['cao tuổi', 'người già']):
+                relevance_score += 0.08
+            
+            # 4. DOCUMENT STATUS RELEVANCE
+            passport_status = citizen_profile.get('passport_status')
+            if passport_status == 'not_have' and any(term in content for term in ['lần đầu', 'chưa có', 'chưa làm']):
+                relevance_score += 0.1
+            elif passport_status == 'expired' and any(term in content for term in ['cấp lại', 'hết hạn', 'quá hạn']):
+                relevance_score += 0.1
+            
+            # 5. PRIORITY ASPECT BOOST
+            priority_aspect = context_summary.get('priority_aspect', '')
+            if priority_aspect and priority_aspect in content:
+                relevance_score += 0.08
+            
+            # 6. VAGUE QUERY HANDLING
+            if context_summary.get('has_vague_query') and len(content) < 100:
+                relevance_score -= 0.05  # Prefer detailed content for vague queries
+            
+            # Update result
+            result['score'] = relevance_score
+            result['context_enhanced'] = True
+            
+            # Keep results above threshold
+            if relevance_score >= 0.25:
+                filtered_results.append(result)
+        
+        # Sort by enhanced score
+        filtered_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+        
+        logger.debug(f"🎯 Context filtering: {len(search_results)} → {len(filtered_results)} results")
+        return filtered_results
+
+    def _apply_conversation_boosting(self, search_results: List[Dict], query_features: Dict[str, Any]) -> List[Dict]:
+        """
+        NEW METHOD: Apply conversation-based boosting
+        """
+        if not query_features:
+            return search_results
+        
+        # Get conversation context
+        original_query = query_features.get('original_query', '')
+        conversation_context = query_features.get('conversation_context', '')
+        
+        for result in search_results:
+            content = result.get('content', '').lower()
+            score = result.get('score', 0.5)
+            
+            # Boost if content matches conversation context
+            if conversation_context:
+                context_words = set(conversation_context.lower().split())
+                content_words = set(content.split())
+                
+                # Calculate context overlap
+                overlap = len(context_words & content_words)
+                if overlap > 2:  # Significant overlap
+                    score += min(overlap * 0.02, 0.08)  # Max 0.08 boost
+            
+            # Boost if matches original query intent
+            if original_query and original_query.lower() != query_features.get('resolved_query', '').lower():
+                original_words = set(original_query.lower().split())
+                content_words = set(content.split())
+                
+                intent_overlap = len(original_words & content_words) / len(original_words) if original_words else 0
+                if intent_overlap > 0.5:
+                    score += 0.05
+            
+            result['score'] = score
+        
+        # Re-sort after boosting
+        search_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+        
+        return search_results
 
     async def _legal_precise_search(self, query: str, k: int) -> List[Dict]:
         """LEGAL PRECISE: Tìm kiếm chính xác cho câu hỏi pháp lý cụ thể"""

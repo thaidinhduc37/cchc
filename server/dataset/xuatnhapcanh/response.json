@@ -1,191 +1,191 @@
-{
-  "procedures": [
-    {
-      "procedure_id": "cap_ho_chieu",
-      "procedure_name": "Cấp hộ chiếu phổ thông",
-      "base_keywords": ["hộ chiếu", "passport", "làm hộ chiếu", "cấp hộ chiếu"],
-      "question_patterns": [
-        "hướng dẫn tôi cấp hộ chiếu",
-        "Hướng dẫn tôi quy trình cấp hộ chiếu",
-        "thủ tục cấp hộ chiếu",
-        "cấp hộ chiếu như thế nào",
-        "quy trình làm hộ chiếu",
-        "làm hộ chiếu cần gì",
-        "hồ sơ làm hộ chiếu",
-        "thủ tục làm hộ chiếu",
-        "cần gì để làm hộ chiếu",
-        "giấy tờ cần thiết",
-        "hộ chiếu mất bao lâu",
-        "lệ phí hộ chiếu",
-        "chi phí làm hộ chiếu",
-        "thời gian làm hộ chiếu",
-        "ở đâu làm hộ chiếu",
-        "nơi làm hộ chiếu",
-        "có thể làm online không"
-      ],
-      "base_response": {
-        "content": "Chào anh/chị, để làm hộ chiếu phổ thông, anh/chị cần thực hiện:\n\n**1. Hồ sơ cần thiết:**\n• Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01)\n• 02 ảnh 4x6cm nền trắng, chụp không quá 6 tháng\n• CMND/CCCD bản chính để đối chiếu\n• Giấy tờ bổ sung (nếu cần): giấy tạm trú, đơn báo mất hộ chiếu cũ\n\n**2. Quy trình:**\n• Bước 1: Chuẩn bị hồ sơ theo quy định\n• Bước 2: Nộp hồ sơ và thanh toán lệ phí\n• Bước 3: Nhận kết quả theo hẹn\n\n**3. Thời gian và lệ phí:**\n• Thời gian xử lý: 08 ngày làm việc\n• Lệ phí: 160.000 đồng (cấp mới), 320.000 đồng (cấp lại)\n\n**4. Nơi nộp:**\n• Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố\n• Giờ làm việc: Thứ 2-6: 7h30-11h30 và 13h30-17h00\n\n**Thời hạn sử dụng:** 10 năm (đối với công dân từ đủ 14 tuổi), 05 năm (đối với công dân dưới 14 tuổi)\n\n**Căn cứ:** Điều 15 Luật Xuất cảnh, nhập cảnh 2019; Thông tư 31/2023/TT-BCA",
-        "law_ref": "Điều 15 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-      },
-      "situations": [
-        {
-          "situation_id": "tre_em_duoi_14",
-          "keywords": [
-            "con",
-            "trẻ",
-            "bé",
-            "em",
-            "cháu",
-            "dưới 14",
-            "chưa đủ 14",
-            "trẻ em"
-          ],
-          "question_patterns": [
-            "trẻ em làm hộ chiếu",
-            "con tôi làm hộ chiếu",
-            "làm hộ chiếu cho con",
-            "hộ chiếu cho trẻ em",
-            "bé làm hộ chiếu cần gì"
-          ],
-          "response": {
-            "content": "Chào anh/chị, để làm hộ chiếu cho **công dân dưới 14 tuổi**, anh/chị cần thực hiện:\n\n**1. Hồ sơ cần thiết:**\n• Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01a) - do cha/mẹ hoặc người đại diện kê khai và ký\n• 02 ảnh 4x6cm nền trắng, chụp không quá 6 tháng\n• Bản sao giấy khai sinh hoặc trích lục khai sinh\n• Giấy tờ chứng minh người đại diện hợp pháp\n• Người đại diện phải xuất trình CMND/CCCD khi nộp hồ sơ\n\n**2. Quy trình:**\n• Bước 1: Chuẩn bị hồ sơ theo quy định\n• Bước 2: Người đại diện nộp hồ sơ và thanh toán lệ phí\n• Bước 3: Nhận kết quả theo hẹn\n\n**3. Thời gian và lệ phí:**\n• Thời gian xử lý: 08 ngày làm việc\n• Lệ phí: 160.000 đồng\n\n**4. Nơi nộp:**\n• Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố nơi trẻ thường trú hoặc tạm trú\n• Giờ làm việc: Thứ 2-6: 7h30-11h30 và 13h30-17h00\n\n**Thời hạn sử dụng:** 05 năm (đối với công dân dưới 14 tuổi, không được gia hạn)\n\n**Căn cứ:** Điều 15, Điều 33 Luật Xuất cảnh, nhập cảnh 2019; Thông tư 31/2023/TT-BCA",
-            "law_ref": "Điều 15, Điều 33 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-          }
-        },
-        {
-          "situation_id": "nguoi_lon_tu_14",
-          "keywords": ["từ 14 tuổi", "14 tuổi trở lên", "người lớn", "trên 14"],
-          "question_patterns": [
-            "người lớn làm hộ chiếu",
-            "từ 14 tuổi làm hộ chiếu"
-          ],
-           "response": {
-            "content": "Chào anh/chị, để làm hộ chiếu cho **công dân từ đủ 14 tuổi trở lên**, anh/chị cần thực hiện:\n\n**1. Hồ sơ cần thiết:**\n• Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01) - tự kê khai và ký tên\n• 02 ảnh 4x6cm nền trắng, chụp không quá 6 tháng\n• CMND/CCCD bản chính để đối chiếu\n• Giấy tờ bổ sung (nếu cần): giấy tạm trú, đơn báo mất hộ chiếu cũ\n\n**2. Quy trình:**\n• Bước 1: Chuẩn bị hồ sơ theo quy định\n• Bước 2: Nộp hồ sơ và thanh toán lệ phí\n• Bước 3: Nhận kết quả theo hẹn\n\n**3. Thời gian và lệ phí:**\n• Thời gian xử lý: 08 ngày làm việc\n• Lệ phí: 160.000 đồng (cấp mới), 320.000 đồng (cấp lại)\n\n**4. Nơi nộp:**\n• Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố nơi thường trú hoặc tạm trú\n• Giờ làm việc: Thứ 2-6: 7h30-11h30 và 13h30-17h00\n\n**Thời hạn sử dụng:** 10 năm (đối với công dân từ đủ 14 tuổi, không được gia hạn)\n\n**Căn cứ:** Điều 15 Luật Xuất cảnh, nhập cảnh 2019; Thông tư 31/2023/TT-BCA",
-            "law_ref": "Điều 15 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-          }
-        },
-        {
-          "situation_id": "gia_dinh_phuc_tap",
-          "keywords": [
-            "bố mẹ ly hôn",
-            "chỉ có mẹ",
-            "một mình",
-            "bố ở nước ngoài",
-            "ông bà",
-            "chú ruột",
-            "con nuôi",
-            "mồ côi"
-          ],
-          "question_patterns": [
-            "bố mẹ ly hôn làm hộ chiếu",
-            "gia đình phức tạp",
-            "làm hộ chiếu khi ly hôn"
-          ],
-          "response": {
-            "content": "Chào bạn, về **tình huống gia đình phức tạp:**\n\n**Bố mẹ ly hôn:**\n• Người được giao quyền nuôi con có quyền làm hộ chiếu\n• Cần quyết định ly hôn + quyết định giao quyền nuôi\n• Nuôi chung: cần đồng ý cả hai\n\n**Một bên vắng mặt:**\n• Ở nước ngoài: Giấy ủy quyền có công chứng lãnh sự\n• Mất tích: Giấy xác nhận công an\n• Từ chối: Khởi kiện tòa quyết định\n\n**Đi với người khác:**\n• Ông bà, chú bác: Giấy ủy quyền có công chứng + chứng minh họ hàng\n• Người khác: Thủ tục phức tạp, cần chấp thuận cơ quan bảo vệ trẻ em\n\n**Con nuôi:** Cần quyết định nhận con nuôi\n**Trẻ mồ côi:** Cần quyết định chỉ định người giám hộ\n\n📚 **Căn cứ:** Luật Hôn nhân Gia đình; Luật Trẻ em; Luật Xuất cảnh, nhập cảnh",
-            "law_ref": "Luật Hôn nhân và Gia đình; Luật Trẻ em"
-          }
-        }
-      ]
-    },
-    {
-      "procedure_id": "xuat_canh_di_nuoc_ngoai",
-      "procedure_name": "Xuất cảnh đi nước ngoài",
-      "base_keywords": [
-        "đi nước ngoài",
-        "xuất cảnh",
-        "ra nước ngoài",
-        "sang nước ngoài"
-      ],
-      "question_patterns": [
-        "thủ tục đi nước ngoài",
-        "xuất cảnh như thế nào",
-        "đi nước ngoài cần gì",
-        "thủ tục xuất cảnh",
-        "ra nước ngoài cần gì",
-        "cần gì để đi nước ngoài"
-      ],
-      "base_response": {
-        "content": "Chào anh/chị, để xuất cảnh đi nước ngoài, anh/chị cần thực hiện:\n\n**1. Giấy tờ cần thiết:**\n• Hộ chiếu còn hiệu lực ít nhất 6 tháng\n• Visa (thị thực) nếu nước đến yêu cầu\n• Vé máy bay hoặc phương tiện giao thông hợp pháp\n• Không thuộc trường hợp bị cấm/tạm hoãn xuất cảnh\n\n**2. Điều kiện theo độ tuổi:**\n• Dưới 14 tuổi: Phải có người đại diện hợp pháp đi cùng\n• 14-17 tuổi: Cần giấy đồng ý của cha/mẹ có công chứng\n• Từ 18 tuổi: Tự do xuất cảnh (nếu không bị hạn chế)\n\n**3. Hồ sơ xin visa (nếu cần):**\n• Đơn xin visa theo yêu cầu của nước đến\n• Ảnh theo quy định\n• Chứng minh tài chính\n• Giấy tờ bổ sung theo mục đích (thư mời, lịch trình...)\n\n**4. Lưu ý quan trọng:**\n• Tùy từng quốc gia ký kết thỏa thuận có thể miễn visa du lịch ngắn hạn\n• Nên chuẩn bị trước 1-2 tháng để đảm bảo thời gian xử lý\n\n**Căn cứ:** Điều 33, Điều 36 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
-        "law_ref": "Điều 33 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam"
-      }
-    },
-    {
-      "procedure_id": "mat_ho_chieu_nuoc_ngoai",
-      "procedure_name": "Mất hộ chiếu ở nước ngoài",
-      "base_keywords": ["mất hộ chiếu", "hộ chiếu bị mất", "thất lạc hộ chiếu"],
-      "context_keywords": [
-        "mất ở nước ngoài",
-        "mất ngoài nước",
-        "bị mất nước ngoài",
-        "thất lạc ở nước ngoài"
-      ],
-      "question_patterns": [
-        "mất hộ chiếu ở nước ngoài",
-        "hộ chiếu bị mất nước ngoài",
-        "thất lạc hộ chiếu ở nước ngoài",
-        "mất hộ chiếu ngoài nước"
-      ],
-      "base_response": {
-        "content": "Chào anh/chị, khi **mất hộ chiếu ở nước ngoài:**\n\n**1. Trình báo ngay:**\n• Báo cảnh sát địa phương để được cấp giấy xác nhận\n• Liên hệ ngay Lãnh sự quán/Đại sứ quán Việt Nam\n• Hotline hỗ trợ công dân: +84 981 848 484\n\n**2. Xin Giấy thông hành:**\n• Nộp hồ sơ tại Lãnh sự quán Việt Nam:\n  - Đơn đề nghị cấp Giấy thông hành\n  - 02 ảnh 4x6cm\n  - Giấy xác nhận trình báo của cảnh sát địa phương\n  - Vé máy bay về Việt Nam\n\n**3. Về Việt Nam làm hộ chiếu mới:**\n• Thời gian: 08 ngày làm việc\n• Lệ phí: 320.000 đồng (cấp lại)\n\n**4. Thời gian & chi phí Giấy thông hành:**\n• Thời gian: 3-7 ngày làm việc\n• Chi phí: 50-200 USD (tùy quốc gia)\n\n**Lưu ý phòng ngừa:** Nên chụp ảnh/scan hộ chiếu, lưu trữ riêng biệt\n\n**Căn cứ:** Điều 15, Điều 28 Luật Xuất cảnh, nhập cảnh 2019",
-        "law_ref": "Điều 15, Điều 28 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-      }
-    }
-  ],
-  "legal_situations": [
-    {
-      "situation_id": "bi_khoi_to_xuat_canh",
-      "strict_matching": true,
-      "core_keywords": ["bị khởi tố", "khởi tố", "bị can", "bị cáo"],
-      "flexible_keywords": ["bi khoi to", "khoi to", "bi can", "bi cao"],
-      "context_keywords": ["xuất cảnh", "đi nước ngoài", "ra nước ngoài"],
-      "question_patterns": ["có được", "được không", "có thể"],
-      "confidence_threshold": 0.85,
-      "response": {
-        "content": "Chào bạn, về **bị khởi tố hình sự và xuất cảnh:**\n\n**Kết luận: KHÔNG được xuất cảnh**\n\n**Căn cứ pháp lý:**\n• Điều 36 khoản 1 Luật Xuất cảnh, nhập cảnh 2019\n• Bị can, bị cáo bị **tạm hoãn xuất cảnh**\n• Người bị tố giác, kiến nghị khởi tố có căn cứ nghi phạm tội\n\n**Phạm vi:**\n• Bị can, bị cáo trong vụ án hình sự\n• Người bị tố giác có căn cứ nghi phạm tội\n• Áp dụng theo Bộ luật Tố tụng hình sự\n\n**Thời gian:** Trong suốt quá trình tố tụng, đến khi có kết luận cuối cùng\n\n**Lưu ý:** Không được tự ý xuất cảnh, vi phạm sẽ bị xử lý\n\n📚 **Căn cứ:** Điều 36 khoản 1 Luật Xuất cảnh, nhập cảnh 2019",
-        "law_ref": "Điều 36 khoản 1 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-      }
-    },
-    {
-      "situation_id": "vi_pham_hanh_chinh",
-      "strict_matching": true,
-      "core_keywords": ["vi phạm", "bị phạt"],
-      "flexible_keywords": ["vi pham", "bi phat"],
-      "payment_status": ["chưa đóng", "đã đóng"],
-      "context_keywords": ["xuất cảnh"],
-      "confidence_threshold": 0.8,
-      "response": {
-        "content": "Chào bạn, về **vi phạm hành chính:**\n\n**Kết luận: TÙY TRƯỜNG HỢP**\n\n**KHÔNG được xuất cảnh nếu:**\n• Quyết định xử phạt có điều khoản hạn chế xuất cảnh\n• Chưa chấp hành xong quyết định có yêu cầu hạn chế\n\n**ĐƯỢC xuất cảnh nếu:**\n• Vi phạm thông thường không có quyết định hạn chế\n• Đã hoàn thành nghĩa vụ và không có điều khoản hạn chế khác\n\n**Lưu ý:** Đã đóng phạt ≠ được xuất cảnh. Cần kiểm tra quyết định có điều khoản hạn chế khác không.\n\n**Kiểm tra:** 069.1000.000\n\n📚 **Căn cứ:** Điều 36 Luật Xuất cảnh, nhập cảnh 2019",
-        "law_ref": "Điều 36 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-      }
-    },
-    {
-      "situation_id": "nghia_vu_quan_su",
-      "strict_matching": true,
-      "core_keywords": ["nghĩa vụ quân sự", "đi nghĩa vụ", "đi lính"],
-      "flexible_keywords": ["nghia vu quan su", "di nghia vu", "di linh"],
-      "age_patterns": ["18", "19", "2[0-7]"],
-      "gender_keywords": ["nam", "trai"],
-      "status_keywords": ["chưa đi", "chưa hoàn thành", "trong độ tuổi"],
-      "context_keywords": ["xuất cảnh", "đi nước ngoài"],
-      "confidence_threshold": 0.8,
-      "response": {
-        "content": "Chào bạn, về **nghĩa vụ quân sự và xuất cảnh:**\n\n**Kết luận: TÙY TRƯỜNG HỢP**\n\n**Căn cứ:** Điều 36 khoản 1 điểm c - Nam trong độ tuổi nghĩa vụ quân sự chưa hoàn thành bị tạm hoãn xuất cảnh\n\n**KHÔNG được xuất cảnh:**\n• Nam 18-27 tuổi chưa hoàn thành nghĩa vụ quân sự\n• Chưa được miễn nghĩa vụ\n• Chưa được tạm hoãn/hoãn gọi nhập ngũ\n\n**ĐƯỢC xuất cảnh:**\n• Đã hoàn thành nghĩa vụ quân sự\n• Được miễn nghĩa vụ\n• Có văn bản tạm hoãn/hoãn gọi của cơ quan quân sự\n• Nữ giới (không thuộc diện)\n• Nam trên 27 tuổi\n\n**Xử lý:** Liên hệ Ban chỉ huy quân sự phường/xã\n\n📚 **Căn cứ:** Điều 36 khoản 1 điểm c Luật Xuất cảnh, nhập cảnh 2019",
-        "law_ref": "Điều 36 khoản 1 điểm c Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-      }
-    },
-    {
-      "situation_id": "no_thue",
-      "strict_matching": true,
-      "core_keywords": ["nợ thuế", "chưa nộp thuế", "thuế"],
-      "flexible_keywords": ["no thue", "chua nop thue"],
-      "context_keywords": ["xuất cảnh", "đi nước ngoài"],
-      "question_patterns": ["có được", "được không"],
-      "confidence_threshold": 0.8,
-      "response": {
-        "content": "Chào bạn, về **nợ thuế và xuất cảnh:**\n\n**Kết luận: TÙY TRƯỜNG HỢP**\n\n**Căn cứ:** Điều 36 khoản 1 điểm d - Chưa hoàn thành nghĩa vụ với ngân sách nhà nước có thể bị tạm hoãn\n\n**Có thể bị tạm hoãn:**\n• Nợ thuế lớn chưa giải quyết\n• Bị cơ quan thuế quyết định hạn chế xuất cảnh\n• Đang cưỡng chế thi hành quyết định về thuế\n• Tranh chấp thuế chưa giải quyết\n\n**Được xuất cảnh:**\n• Đã hoàn thành nghĩa vụ thuế\n• Không nợ thuế hoặc nợ nhỏ\n• Không bị hạn chế xuất cảnh\n• Có thỏa thuận nộp thuế với cơ quan thuế\n\n**Kiểm tra:** Cơ quan thuế quản lý, Hotline: 19001008\n\n📚 **Căn cứ:** Điều 36 khoản 1 điểm d Luật Xuất cảnh, nhập cảnh 2019",
-        "law_ref": "Điều 36 khoản 1 điểm d Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
-      }
-    }
-  ]
-}
+// {
+//   "procedures": [
+//     {
+//       "procedure_id": "cap_ho_chieu",
+//       "procedure_name": "Cấp hộ chiếu phổ thông",
+//       "base_keywords": ["hộ chiếu", "passport", "làm hộ chiếu", "cấp hộ chiếu"],
+//       "question_patterns": [
+//         "hướng dẫn tôi cấp hộ chiếu",
+//         "Hướng dẫn tôi quy trình cấp hộ chiếu",
+//         "thủ tục cấp hộ chiếu",
+//         "cấp hộ chiếu như thế nào",
+//         "quy trình làm hộ chiếu",
+//         "làm hộ chiếu cần gì",
+//         "hồ sơ làm hộ chiếu",
+//         "thủ tục làm hộ chiếu",
+//         "cần gì để làm hộ chiếu",
+//         "giấy tờ cần thiết",
+//         "hộ chiếu mất bao lâu",
+//         "lệ phí hộ chiếu",
+//         "chi phí làm hộ chiếu",
+//         "thời gian làm hộ chiếu",
+//         "ở đâu làm hộ chiếu",
+//         "nơi làm hộ chiếu",
+//         "có thể làm online không"
+//       ],
+//       "base_response": {
+//         "content": "Chào anh/chị, để làm hộ chiếu phổ thông, anh/chị cần thực hiện:\n\n**1. Hồ sơ cần thiết:**\n• Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01)\n• 02 ảnh 4x6cm nền trắng, chụp không quá 6 tháng\n• CMND/CCCD bản chính để đối chiếu\n• Giấy tờ bổ sung (nếu cần): giấy tạm trú, đơn báo mất hộ chiếu cũ\n\n**2. Quy trình:**\n• Bước 1: Chuẩn bị hồ sơ theo quy định\n• Bước 2: Nộp hồ sơ và thanh toán lệ phí\n• Bước 3: Nhận kết quả theo hẹn\n\n**3. Thời gian và lệ phí:**\n• Thời gian xử lý: 08 ngày làm việc\n• Lệ phí: 160.000 đồng (cấp mới), 320.000 đồng (cấp lại)\n\n**4. Nơi nộp:**\n• Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố\n• Giờ làm việc: Thứ 2-6: 7h30-11h30 và 13h30-17h00\n\n**Thời hạn sử dụng:** 10 năm (đối với công dân từ đủ 14 tuổi), 05 năm (đối với công dân dưới 14 tuổi)\n\n**Căn cứ:** Điều 15 Luật Xuất cảnh, nhập cảnh 2019; Thông tư 31/2023/TT-BCA",
+//         "law_ref": "Điều 15 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//       },
+//       "situations": [
+//         {
+//           "situation_id": "tre_em_duoi_14",
+//           "keywords": [
+//             "con",
+//             "trẻ",
+//             "bé",
+//             "em",
+//             "cháu",
+//             "dưới 14",
+//             "chưa đủ 14",
+//             "trẻ em"
+//           ],
+//           "question_patterns": [
+//             "trẻ em làm hộ chiếu",
+//             "con tôi làm hộ chiếu",
+//             "làm hộ chiếu cho con",
+//             "hộ chiếu cho trẻ em",
+//             "bé làm hộ chiếu cần gì"
+//           ],
+//           "response": {
+//             "content": "Chào anh/chị, để làm hộ chiếu cho **công dân dưới 14 tuổi**, anh/chị cần thực hiện:\n\n**1. Hồ sơ cần thiết:**\n• Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01a) - do cha/mẹ hoặc người đại diện kê khai và ký\n• 02 ảnh 4x6cm nền trắng, chụp không quá 6 tháng\n• Bản sao giấy khai sinh hoặc trích lục khai sinh\n• Giấy tờ chứng minh người đại diện hợp pháp\n• Người đại diện phải xuất trình CMND/CCCD khi nộp hồ sơ\n\n**2. Quy trình:**\n• Bước 1: Chuẩn bị hồ sơ theo quy định\n• Bước 2: Người đại diện nộp hồ sơ và thanh toán lệ phí\n• Bước 3: Nhận kết quả theo hẹn\n\n**3. Thời gian và lệ phí:**\n• Thời gian xử lý: 08 ngày làm việc\n• Lệ phí: 160.000 đồng\n\n**4. Nơi nộp:**\n• Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố nơi trẻ thường trú hoặc tạm trú\n• Giờ làm việc: Thứ 2-6: 7h30-11h30 và 13h30-17h00\n\n**Thời hạn sử dụng:** 05 năm (đối với công dân dưới 14 tuổi, không được gia hạn)\n\n**Căn cứ:** Điều 15, Điều 33 Luật Xuất cảnh, nhập cảnh 2019; Thông tư 31/2023/TT-BCA",
+//             "law_ref": "Điều 15, Điều 33 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//           }
+//         },
+//         {
+//           "situation_id": "nguoi_lon_tu_14",
+//           "keywords": ["từ 14 tuổi", "14 tuổi trở lên", "người lớn", "trên 14"],
+//           "question_patterns": [
+//             "người lớn làm hộ chiếu",
+//             "từ 14 tuổi làm hộ chiếu"
+//           ],
+//            "response": {
+//             "content": "Chào anh/chị, để làm hộ chiếu cho **công dân từ đủ 14 tuổi trở lên**, anh/chị cần thực hiện:\n\n**1. Hồ sơ cần thiết:**\n• Tờ khai đề nghị cấp hộ chiếu (Mẫu TK01) - tự kê khai và ký tên\n• 02 ảnh 4x6cm nền trắng, chụp không quá 6 tháng\n• CMND/CCCD bản chính để đối chiếu\n• Giấy tờ bổ sung (nếu cần): giấy tạm trú, đơn báo mất hộ chiếu cũ\n\n**2. Quy trình:**\n• Bước 1: Chuẩn bị hồ sơ theo quy định\n• Bước 2: Nộp hồ sơ và thanh toán lệ phí\n• Bước 3: Nhận kết quả theo hẹn\n\n**3. Thời gian và lệ phí:**\n• Thời gian xử lý: 08 ngày làm việc\n• Lệ phí: 160.000 đồng (cấp mới), 320.000 đồng (cấp lại)\n\n**4. Nơi nộp:**\n• Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố nơi thường trú hoặc tạm trú\n• Giờ làm việc: Thứ 2-6: 7h30-11h30 và 13h30-17h00\n\n**Thời hạn sử dụng:** 10 năm (đối với công dân từ đủ 14 tuổi, không được gia hạn)\n\n**Căn cứ:** Điều 15 Luật Xuất cảnh, nhập cảnh 2019; Thông tư 31/2023/TT-BCA",
+//             "law_ref": "Điều 15 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//           }
+//         },
+//         {
+//           "situation_id": "gia_dinh_phuc_tap",
+//           "keywords": [
+//             "bố mẹ ly hôn",
+//             "chỉ có mẹ",
+//             "một mình",
+//             "bố ở nước ngoài",
+//             "ông bà",
+//             "chú ruột",
+//             "con nuôi",
+//             "mồ côi"
+//           ],
+//           "question_patterns": [
+//             "bố mẹ ly hôn làm hộ chiếu",
+//             "gia đình phức tạp",
+//             "làm hộ chiếu khi ly hôn"
+//           ],
+//           "response": {
+//             "content": "Chào bạn, về **tình huống gia đình phức tạp:**\n\n**Bố mẹ ly hôn:**\n• Người được giao quyền nuôi con có quyền làm hộ chiếu\n• Cần quyết định ly hôn + quyết định giao quyền nuôi\n• Nuôi chung: cần đồng ý cả hai\n\n**Một bên vắng mặt:**\n• Ở nước ngoài: Giấy ủy quyền có công chứng lãnh sự\n• Mất tích: Giấy xác nhận công an\n• Từ chối: Khởi kiện tòa quyết định\n\n**Đi với người khác:**\n• Ông bà, chú bác: Giấy ủy quyền có công chứng + chứng minh họ hàng\n• Người khác: Thủ tục phức tạp, cần chấp thuận cơ quan bảo vệ trẻ em\n\n**Con nuôi:** Cần quyết định nhận con nuôi\n**Trẻ mồ côi:** Cần quyết định chỉ định người giám hộ\n\n📚 **Căn cứ:** Luật Hôn nhân Gia đình; Luật Trẻ em; Luật Xuất cảnh, nhập cảnh",
+//             "law_ref": "Luật Hôn nhân và Gia đình; Luật Trẻ em"
+//           }
+//         }
+//       ]
+//     },
+//     {
+//       "procedure_id": "xuat_canh_di_nuoc_ngoai",
+//       "procedure_name": "Xuất cảnh đi nước ngoài",
+//       "base_keywords": [
+//         "đi nước ngoài",
+//         "xuất cảnh",
+//         "ra nước ngoài",
+//         "sang nước ngoài"
+//       ],
+//       "question_patterns": [
+//         "thủ tục đi nước ngoài",
+//         "xuất cảnh như thế nào",
+//         "đi nước ngoài cần gì",
+//         "thủ tục xuất cảnh",
+//         "ra nước ngoài cần gì",
+//         "cần gì để đi nước ngoài"
+//       ],
+//       "base_response": {
+//         "content": "Chào anh/chị, để xuất cảnh đi nước ngoài, anh/chị cần thực hiện:\n\n**1. Giấy tờ cần thiết:**\n• Hộ chiếu còn hiệu lực ít nhất 6 tháng\n• Visa (thị thực) nếu nước đến yêu cầu\n• Vé máy bay hoặc phương tiện giao thông hợp pháp\n• Không thuộc trường hợp bị cấm/tạm hoãn xuất cảnh\n\n**2. Điều kiện theo độ tuổi:**\n• Dưới 14 tuổi: Phải có người đại diện hợp pháp đi cùng\n• 14-17 tuổi: Cần giấy đồng ý của cha/mẹ có công chứng\n• Từ 18 tuổi: Tự do xuất cảnh (nếu không bị hạn chế)\n\n**3. Hồ sơ xin visa (nếu cần):**\n• Đơn xin visa theo yêu cầu của nước đến\n• Ảnh theo quy định\n• Chứng minh tài chính\n• Giấy tờ bổ sung theo mục đích (thư mời, lịch trình...)\n\n**4. Lưu ý quan trọng:**\n• Tùy từng quốc gia ký kết thỏa thuận có thể miễn visa du lịch ngắn hạn\n• Nên chuẩn bị trước 1-2 tháng để đảm bảo thời gian xử lý\n\n**Căn cứ:** Điều 33, Điều 36 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam",
+//         "law_ref": "Điều 33 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam"
+//       }
+//     },
+//     {
+//       "procedure_id": "mat_ho_chieu_nuoc_ngoai",
+//       "procedure_name": "Mất hộ chiếu ở nước ngoài",
+//       "base_keywords": ["mất hộ chiếu", "hộ chiếu bị mất", "thất lạc hộ chiếu"],
+//       "context_keywords": [
+//         "mất ở nước ngoài",
+//         "mất ngoài nước",
+//         "bị mất nước ngoài",
+//         "thất lạc ở nước ngoài"
+//       ],
+//       "question_patterns": [
+//         "mất hộ chiếu ở nước ngoài",
+//         "hộ chiếu bị mất nước ngoài",
+//         "thất lạc hộ chiếu ở nước ngoài",
+//         "mất hộ chiếu ngoài nước"
+//       ],
+//       "base_response": {
+//         "content": "Chào anh/chị, khi **mất hộ chiếu ở nước ngoài:**\n\n**1. Trình báo ngay:**\n• Báo cảnh sát địa phương để được cấp giấy xác nhận\n• Liên hệ ngay Lãnh sự quán/Đại sứ quán Việt Nam\n• Hotline hỗ trợ công dân: +84 981 848 484\n\n**2. Xin Giấy thông hành:**\n• Nộp hồ sơ tại Lãnh sự quán Việt Nam:\n  - Đơn đề nghị cấp Giấy thông hành\n  - 02 ảnh 4x6cm\n  - Giấy xác nhận trình báo của cảnh sát địa phương\n  - Vé máy bay về Việt Nam\n\n**3. Về Việt Nam làm hộ chiếu mới:**\n• Thời gian: 08 ngày làm việc\n• Lệ phí: 320.000 đồng (cấp lại)\n\n**4. Thời gian & chi phí Giấy thông hành:**\n• Thời gian: 3-7 ngày làm việc\n• Chi phí: 50-200 USD (tùy quốc gia)\n\n**Lưu ý phòng ngừa:** Nên chụp ảnh/scan hộ chiếu, lưu trữ riêng biệt\n\n**Căn cứ:** Điều 15, Điều 28 Luật Xuất cảnh, nhập cảnh 2019",
+//         "law_ref": "Điều 15, Điều 28 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//       }
+//     }
+//   ],
+//   "legal_situations": [
+//     {
+//       "situation_id": "bi_khoi_to_xuat_canh",
+//       "strict_matching": true,
+//       "core_keywords": ["bị khởi tố", "khởi tố", "bị can", "bị cáo"],
+//       "flexible_keywords": ["bi khoi to", "khoi to", "bi can", "bi cao"],
+//       "context_keywords": ["xuất cảnh", "đi nước ngoài", "ra nước ngoài"],
+//       "question_patterns": ["có được", "được không", "có thể"],
+//       "confidence_threshold": 0.85,
+//       "response": {
+//         "content": "Chào bạn, về **bị khởi tố hình sự và xuất cảnh:**\n\n**Kết luận: KHÔNG được xuất cảnh**\n\n**Căn cứ pháp lý:**\n• Điều 36 khoản 1 Luật Xuất cảnh, nhập cảnh 2019\n• Bị can, bị cáo bị **tạm hoãn xuất cảnh**\n• Người bị tố giác, kiến nghị khởi tố có căn cứ nghi phạm tội\n\n**Phạm vi:**\n• Bị can, bị cáo trong vụ án hình sự\n• Người bị tố giác có căn cứ nghi phạm tội\n• Áp dụng theo Bộ luật Tố tụng hình sự\n\n**Thời gian:** Trong suốt quá trình tố tụng, đến khi có kết luận cuối cùng\n\n**Lưu ý:** Không được tự ý xuất cảnh, vi phạm sẽ bị xử lý\n\n📚 **Căn cứ:** Điều 36 khoản 1 Luật Xuất cảnh, nhập cảnh 2019",
+//         "law_ref": "Điều 36 khoản 1 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//       }
+//     },
+//     {
+//       "situation_id": "vi_pham_hanh_chinh",
+//       "strict_matching": true,
+//       "core_keywords": ["vi phạm", "bị phạt"],
+//       "flexible_keywords": ["vi pham", "bi phat"],
+//       "payment_status": ["chưa đóng", "đã đóng"],
+//       "context_keywords": ["xuất cảnh"],
+//       "confidence_threshold": 0.8,
+//       "response": {
+//         "content": "Chào bạn, về **vi phạm hành chính:**\n\n**Kết luận: TÙY TRƯỜNG HỢP**\n\n**KHÔNG được xuất cảnh nếu:**\n• Quyết định xử phạt có điều khoản hạn chế xuất cảnh\n• Chưa chấp hành xong quyết định có yêu cầu hạn chế\n\n**ĐƯỢC xuất cảnh nếu:**\n• Vi phạm thông thường không có quyết định hạn chế\n• Đã hoàn thành nghĩa vụ và không có điều khoản hạn chế khác\n\n**Lưu ý:** Đã đóng phạt ≠ được xuất cảnh. Cần kiểm tra quyết định có điều khoản hạn chế khác không.\n\n**Kiểm tra:** 069.1000.000\n\n📚 **Căn cứ:** Điều 36 Luật Xuất cảnh, nhập cảnh 2019",
+//         "law_ref": "Điều 36 Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//       }
+//     },
+//     {
+//       "situation_id": "nghia_vu_quan_su",
+//       "strict_matching": true,
+//       "core_keywords": ["nghĩa vụ quân sự", "đi nghĩa vụ", "đi lính"],
+//       "flexible_keywords": ["nghia vu quan su", "di nghia vu", "di linh"],
+//       "age_patterns": ["18", "19", "2[0-7]"],
+//       "gender_keywords": ["nam", "trai"],
+//       "status_keywords": ["chưa đi", "chưa hoàn thành", "trong độ tuổi"],
+//       "context_keywords": ["xuất cảnh", "đi nước ngoài"],
+//       "confidence_threshold": 0.8,
+//       "response": {
+//         "content": "Chào bạn, về **nghĩa vụ quân sự và xuất cảnh:**\n\n**Kết luận: TÙY TRƯỜNG HỢP**\n\n**Căn cứ:** Điều 36 khoản 1 điểm c - Nam trong độ tuổi nghĩa vụ quân sự chưa hoàn thành bị tạm hoãn xuất cảnh\n\n**KHÔNG được xuất cảnh:**\n• Nam 18-27 tuổi chưa hoàn thành nghĩa vụ quân sự\n• Chưa được miễn nghĩa vụ\n• Chưa được tạm hoãn/hoãn gọi nhập ngũ\n\n**ĐƯỢC xuất cảnh:**\n• Đã hoàn thành nghĩa vụ quân sự\n• Được miễn nghĩa vụ\n• Có văn bản tạm hoãn/hoãn gọi của cơ quan quân sự\n• Nữ giới (không thuộc diện)\n• Nam trên 27 tuổi\n\n**Xử lý:** Liên hệ Ban chỉ huy quân sự phường/xã\n\n📚 **Căn cứ:** Điều 36 khoản 1 điểm c Luật Xuất cảnh, nhập cảnh 2019",
+//         "law_ref": "Điều 36 khoản 1 điểm c Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//       }
+//     },
+//     {
+//       "situation_id": "no_thue",
+//       "strict_matching": true,
+//       "core_keywords": ["nợ thuế", "chưa nộp thuế", "thuế"],
+//       "flexible_keywords": ["no thue", "chua nop thue"],
+//       "context_keywords": ["xuất cảnh", "đi nước ngoài"],
+//       "question_patterns": ["có được", "được không"],
+//       "confidence_threshold": 0.8,
+//       "response": {
+//         "content": "Chào bạn, về **nợ thuế và xuất cảnh:**\n\n**Kết luận: TÙY TRƯỜNG HỢP**\n\n**Căn cứ:** Điều 36 khoản 1 điểm d - Chưa hoàn thành nghĩa vụ với ngân sách nhà nước có thể bị tạm hoãn\n\n**Có thể bị tạm hoãn:**\n• Nợ thuế lớn chưa giải quyết\n• Bị cơ quan thuế quyết định hạn chế xuất cảnh\n• Đang cưỡng chế thi hành quyết định về thuế\n• Tranh chấp thuế chưa giải quyết\n\n**Được xuất cảnh:**\n• Đã hoàn thành nghĩa vụ thuế\n• Không nợ thuế hoặc nợ nhỏ\n• Không bị hạn chế xuất cảnh\n• Có thỏa thuận nộp thuế với cơ quan thuế\n\n**Kiểm tra:** Cơ quan thuế quản lý, Hotline: 19001008\n\n📚 **Căn cứ:** Điều 36 khoản 1 điểm d Luật Xuất cảnh, nhập cảnh 2019",
+//         "law_ref": "Điều 36 khoản 1 điểm d Luật Xuất cảnh, nhập cảnh của công dân Việt Nam 2019"
+//       }
+//     }
+//   ]
+// }

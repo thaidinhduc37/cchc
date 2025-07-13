@@ -41,6 +41,9 @@ class LLMHandler:
         
         self._init_providers()
         logger.info("LLM Handler - FIXED (đã sửa tất cả lỗi)")
+        
+        self._current_conversation_context = {}  # NEW: Store conversation context
+        logger.info("LLM Handler - ENHANCED with conversation context")
     
     def _init_providers(self):
         """Init providers"""
@@ -73,33 +76,40 @@ class LLMHandler:
             logger.warning("❌ Ollama not available")
     
     async def generate_response(self, query: str, context_result: Any, query_features: Any = None) -> Dict[str, Any]:
-        """Main: Generate response từ organized context"""
+        """
+        ENHANCED: Generate response với conversation context integration
+        """
         self.stats['total_requests'] += 1
         
-        # Priority 1: Gemini API
+        # Store conversation context for use in prompts
+        self._current_conversation_context = self._extract_conversation_context(query_features)
+        
+        # Priority 1: Gemini API với conversation context
         if self.providers['gemini']['available']:
-            result = await self._try_gemini_api(context_result)
+            result = await self._try_gemini_api(context_result, query_features)
             if result.get('success'):
                 self.stats['api_responses'] += 1
                 self.providers['gemini']['used'] += 1
                 return result
         
-        # Priority 2: Ollama local
+        # Priority 2: Ollama local với conversation context
         if self.providers['ollama']['available']:
-            result = await self._try_ollama_guided(context_result)
+            result = await self._try_ollama_guided(context_result, query_features)
             if result.get('success'):
                 self.stats['local_responses'] += 1
                 self.providers['ollama']['used'] += 1
                 return result
         
-        # Priority 3: Emergency fallback
+        # Priority 3: Enhanced fallback với conversation context
         self.stats['fallback_responses'] += 1
-        return self._create_fallback_response(context_result)
+        return self._create_fallback_response(context_result, query_features)
     
-    async def _try_gemini_api(self, context_result: Any) -> Dict[str, Any]:
-        """Gemini API - minimal prompt"""
+    async def _try_gemini_api(self, context_result: Any, query_features: Any) -> Dict[str, Any]:
+        """
+        ENHANCED: Gemini API với conversation context
+        """
         try:
-            prompt = self._create_api_prompt(context_result)
+            prompt = self._create_api_prompt(context_result, query_features)
             
             response = await asyncio.wait_for(
                 asyncio.to_thread(self.gemini_model.generate_content, prompt),
@@ -109,24 +119,118 @@ class LLMHandler:
             if response and response.text:
                 answer = response.text.strip()
                 
-                if len(answer) > 200 and 'Chào bạn' in answer:
+                # Enhanced validation
+                if len(answer) > 150 and ('Chào bạn' in answer or 'để' in answer[:50]):
                     return {
                         'success': True,
                         'answer': answer,
-                        'provider': 'gemini_api',
-                        'method': 'api_natural_formatting'
+                        'provider': 'gemini_api_enhanced',
+                        'method': 'conversation_aware'
                     }
             
             return {'success': False, 'error': 'Invalid response'}
             
         except Exception as e:
-            logger.warning(f"Gemini API failed: {e}")
+            logger.warning(f"Enhanced Gemini API failed: {e}")
             return {'success': False, 'error': str(e)}
+
+    def _extract_conversation_context(self, query_features: Any) -> Dict[str, Any]:
+        """
+        NEW: Extract conversation context from query_features
+        """
+        conversation_context = {
+            'has_context': False,
+            'topic_thread': '',
+            'location': '',
+            'user_status': '',
+            'conversation_bridge': '',
+            'response_tone': 'formal'
+        }
+        
+        if not query_features:
+            return conversation_context
+        
+        # Extract topic thread
+        if hasattr(query_features, 'topic_thread'):
+            conversation_context['topic_thread'] = query_features.topic_thread
+            conversation_context['has_context'] = True
+        
+        # Extract citizen profile
+        if hasattr(query_features, 'citizen_profile'):
+            citizen_profile = query_features.citizen_profile
+            
+            # Location context
+            location = citizen_profile.get('location')
+            if location:
+                conversation_context['location'] = location
+                conversation_context['has_context'] = True
+            
+            # User status
+            passport_status = citizen_profile.get('passport_status')
+            age_group = citizen_profile.get('age_group')
+            
+            if passport_status == 'not_have':
+                conversation_context['user_status'] = 'first_time'
+            elif passport_status == 'expired':
+                conversation_context['user_status'] = 'renewal'
+            elif age_group == 'minor':
+                conversation_context['user_status'] = 'minor'
+        
+        # Build conversation bridge
+        if conversation_context['has_context']:
+            conversation_context['conversation_bridge'] = self._build_conversation_bridge(conversation_context)
+            conversation_context['response_tone'] = self._determine_response_tone(conversation_context)
+        
+        return conversation_context
+
+    def _build_conversation_bridge(self, conv_context: Dict) -> str:
+        """Build natural conversation bridge"""
+        bridge_parts = []
+        
+        # Topic continuity
+        topic = conv_context.get('topic_thread')
+        if topic == 'hộ chiếu':
+            bridge_parts.append("về thủ tục hộ chiếu")
+        elif topic == 'visa':
+            bridge_parts.append("về vấn đề visa")
+        
+        # Location context
+        location = conv_context.get('location')
+        if location:
+            bridge_parts.append(f"tại {location}")
+        
+        # User status context
+        user_status = conv_context.get('user_status')
+        if user_status == 'first_time':
+            bridge_parts.append("cho trường hợp làm lần đầu")
+        elif user_status == 'renewal':
+            bridge_parts.append("về việc cấp lại")
+        elif user_status == 'minor':
+            bridge_parts.append("cho trẻ em")
+        
+        return ' '.join(bridge_parts) if bridge_parts else ''
+
+    def _determine_response_tone(self, conv_context: Dict) -> str:
+        """Determine response tone from conversation context"""
+        user_status = conv_context.get('user_status')
+        
+        if user_status == 'first_time':
+            return 'supportive'  # Hướng dẫn chi tiết cho người lần đầu
+        elif user_status == 'renewal':
+            return 'efficient'   # Ngắn gọn cho người đã có kinh nghiệm
+        elif user_status == 'minor':
+            return 'careful'     # Cẩn thận cho trường hợp trẻ em
+        elif conv_context.get('topic_thread'):
+            return 'conversational'  # Tự nhiên cho conversation liên tục
+        
+        return 'formal'
     
-    async def _try_ollama_guided(self, context_result: Any) -> Dict[str, Any]:
-        """Ollama local - detailed template"""
+    async def _try_ollama_guided_enhanced(self, context_result: Any, query_features: Any) -> Dict[str, Any]:
+        """
+        ENHANCED: Ollama với conversation context
+        """
         try:
-            prompt = self._create_ollama_template(context_result)
+            prompt = self._create_ollama_template(context_result, query_features)
             
             response = await asyncio.wait_for(
                 asyncio.to_thread(self._ollama_request, prompt),
@@ -137,107 +241,122 @@ class LLMHandler:
                 answer = response['answer']
                 answer = self._clean_ollama_response(answer)
                 
-                if len(answer) > 200:
+                if len(answer) > 150:
                     return {
                         'success': True,
                         'answer': answer,
-                        'provider': 'ollama_local',
-                        'method': 'guided_template'
+                        'provider': 'ollama_local_enhanced',
+                        'method': 'conversation_aware_template'
                     }
             
-            return {'success': False, 'error': 'Ollama generation failed'}
+            return {'success': False, 'error': 'Enhanced Ollama generation failed'}
             
         except Exception as e:
-            logger.warning(f"Ollama failed: {e}")
+            logger.warning(f"Enhanced Ollama failed: {e}")
             return {'success': False, 'error': str(e)}
     
-    def _create_api_prompt(self, context_result: Any) -> str:
-        """Simple prompt for API"""
+    def _create_api_prompt(self, context_result: Any, query_features: Any) -> str:
+        """
+        ENHANCED: Natural prompt với conversation context
+        """
         query = getattr(context_result, 'query', 'câu hỏi của bạn')
         primary_content = getattr(context_result, 'primary_content', '')
         citation = getattr(context_result, 'primary_citation', '')
         needs_conclusion = getattr(context_result, 'needs_conclusion', False)
         answer_type = getattr(context_result, 'answer_type', 'legal')
-        exception_detected = getattr(context_result, 'exception_detected', False)
         
+        # Get conversation context
+        conv_context = self._current_conversation_context
+        conversation_bridge = conv_context.get('conversation_bridge', '')
+        response_tone = conv_context.get('response_tone', 'formal')
+        
+        # Build natural opening
+        if conversation_bridge:
+            opening = f"Chào bạn, để {conversation_bridge}, tôi xin trả lời như sau:"
+        else:
+            opening = f"Chào bạn, về câu hỏi \"{query}\", tôi xin trả lời như sau:"
+        
+        # Format guidance based on answer type
         format_guidance = ""
         if answer_type == "procedure":
-            format_guidance = "4. Trình bày theo từng bước thủ tục rõ ràng\n"
+            if response_tone == 'supportive':
+                format_guidance = "4. Hướng dẫn từng bước chi tiết, dễ hiểu cho người lần đầu\n"
+            elif response_tone == 'efficient':
+                format_guidance = "4. Trình bày các bước thủ tục ngắn gọn, trọng tâm\n"
+            else:
+                format_guidance = "4. Trình bày thủ tục theo từng bước rõ ràng\n"
         elif answer_type == "direct_quote":
-            format_guidance = "4. Trích dẫn trực tiếp ngắn gọn\n"
+            format_guidance = "4. Trích dẫn trực tiếp quy định\n"
         else:
-            format_guidance = "4. Giải thích quy định pháp luật\n"
+            format_guidance = "4. Giải thích quy định pháp luật một cách dễ hiểu\n"
         
-        if exception_detected:
-            format_guidance += "5. LƯU Ý: Có ngoại lệ/hạn chế trong quy định\n"
-        
+        # Conclusion step
         conclusion_step = ""
         if needs_conclusion:
-            conclusion_step = "6. Kết luận rõ ràng: ĐƯỢC hoặc KHÔNG ĐƯỢC (với lý do)\n"
+            conclusion_step = "5. Kết luận rõ ràng: ĐƯỢC hoặc KHÔNG ĐƯỢC (với lý do)\n"
         
-        final_step = "7." if needs_conclusion else "6."
+        final_step = "6." if needs_conclusion else "5."
         
-        prompt = f"""Hãy trả lời câu hỏi pháp luật sau theo định dạng chuẩn:
+        prompt = f"""Hãy trả lời câu hỏi pháp luật theo format tự nhiên:
 
 Câu hỏi: {query}
-Quy định pháp luật: {primary_content}
+Quy định: {primary_content}
 Trích dẫn: {citation}
+Ngữ cảnh: {conversation_bridge}
+Tone: {response_tone}
 
 Yêu cầu:
-1. Bắt đầu: "Chào bạn, dựa trên quy định của Luật Xuất cảnh, nhập cảnh của công dân Việt Nam, tôi xin trả lời câu hỏi: \"{query}\" như sau:"
+1. Mở đầu tự nhiên: "{opening}"
 
-2. Trích dẫn đầy đủ: "Căn cứ {citation}, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam:"
+2. Trích dẫn pháp lý (nếu có): "Căn cứ {citation}:"
 
-3. Nội dung quy định với dấu ngoặc kép và indent
+3. Nội dung quy định (trong dấu ngoặc kép)
 
 {format_guidance}{conclusion_step}{final_step} Kết thúc: "Đây là thông tin tham khảo, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"
 
-Trả lời chuyên nghiệp, trích dẫn chính xác:"""
-        
+Trả lời tự nhiên, mạch lạc, phù hợp với ngữ cảnh conversation:"""
+    
         return prompt
     
-    def _create_ollama_template(self, context_result: Any) -> str:
-        """Detailed template for Ollama"""
+    def _create_enhanced_ollama_template(self, context_result: Any, query_features: Any) -> str:
+        """
+        ENHANCED: Ollama template với conversation context
+        """
         query = getattr(context_result, 'query', 'câu hỏi của bạn')
-        primary_content = getattr(context_result, 'primary_content', '')
         citation = getattr(context_result, 'primary_citation', '')
+        legal_text = self._extract_key_legal_text(getattr(context_result, 'primary_content', ''))
         needs_conclusion = getattr(context_result, 'needs_conclusion', False)
-        answer_type = getattr(context_result, 'answer_type', 'legal')
-        exception_detected = getattr(context_result, 'exception_detected', False)
         
-        legal_quote = self._extract_key_legal_text(primary_content)
+        # Get conversation context
+        conv_context = self._current_conversation_context
+        conversation_bridge = conv_context.get('conversation_bridge', '')
         
+        # Natural opening
+        if conversation_bridge:
+            opening = f"Chào bạn, để {conversation_bridge}, tôi xin trả lời như sau:"
+        else:
+            opening = f"Chào bạn, về câu hỏi \"{query}\", tôi xin trả lời như sau:"
+        
+        # Conclusion part
         conclusion_part = ""
         if needs_conclusion:
-            conclusion_part = "\nKết luận: [ĐƯỢC/KHÔNG ĐƯỢC] [lý do ngắn gọn]"
+            conclusion_part = "\n\nKết luận: [ĐƯỢC/KHÔNG ĐƯỢC] [lý do ngắn gọn]"
         
-        exception_note = ""
-        if exception_detected:
-            exception_note = "\n\nLƯU Ý: Quy định có ngoại lệ/hạn chế cần xem xét."
-        
-        template = f"""Bạn là chuyên gia pháp luật. Hãy trả lời theo CHÍNH XÁC template sau:
+        template = f"""Bạn là chuyên gia pháp luật. Trả lời theo CHÍNH XÁC template sau:
 
-TEMPLATE CHUẨN:
+TEMPLATE:
 ```
-Chào bạn, dựa trên quy định của Luật Xuất cảnh, nhập cảnh của công dân Việt Nam, tôi xin trả lời câu hỏi: "{query}" như sau:
+{opening}
 
-Căn cứ {citation}, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam:
+Căn cứ {citation}:
 
-    "{legal_quote}"{exception_note}{conclusion_part}
+    "{legal_text}"{conclusion_part}
 
 Đây là thông tin tham khảo, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn
 ```
 
-DỮ LIỆU:
-- Câu hỏi: {query}
-- Trích dẫn: {citation}
-- Nội dung luật: {legal_quote}
-- Loại trả lời: {answer_type}
-- Cần kết luận: {'Có' if needs_conclusion else 'Không'}
-- Có ngoại lệ: {'Có' if exception_detected else 'Không'}
-
-ĐIỀN VÀO TEMPLATE TRÊN. KHÔNG thêm bớt gì:"""
-        
+ĐIỀN VÀO TEMPLATE. KHÔNG thêm bớt:"""
+    
         return template
     
     def _extract_key_legal_text(self, content: str) -> str:
@@ -301,56 +420,65 @@ DỮ LIỆU:
         
         return response
     
-    def _create_fallback_response(self, context_result: Any) -> Dict[str, Any]:
-        """🔧 FIXED: Better fallback responses cho từng trường hợp"""
+    def _create_fallback_response(self, context_result: Any, query_features: Any) -> Dict[str, Any]:
+        """
+        ENHANCED: Clean fallback responses với conversation context
+        """
         query = getattr(context_result, 'query', 'câu hỏi của bạn')
         citation = getattr(context_result, 'primary_citation', '')
         legal_text = self._extract_key_legal_text(getattr(context_result, 'primary_content', ''))
-        exception_detected = getattr(context_result, 'exception_detected', False)
         
-        # 🔧 CASE 1: Có đủ thông tin nhưng LLM thất bại
-        if citation and legal_text:
-            exception_note = "\n\nLƯU Ý: Quy định có ngoại lệ/hạn chế cần xem xét." if exception_detected else ""
-            
-            response = f"""Chào bạn, dựa trên quy định của Luật Xuất cảnh, nhập cảnh của công dân Việt Nam, tôi xin trả lời câu hỏi: "{query}" như sau:
-
-Căn cứ {citation}, Luật Xuất cảnh, nhập cảnh của công dân Việt Nam:
-
-    "{legal_text}"{exception_note}
-
-Đây là thông tin tham khảo, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"""
-            
-            return {
-                'success': True,
-                'answer': response,
-                'provider': 'fallback_with_content',
-                'method': 'direct_citation'
-            }
+        # Get conversation context
+        conv_context = self._current_conversation_context
+        conversation_bridge = conv_context.get('conversation_bridge', '')
         
-        # 🔧 CASE 2: Có thông tin nhưng không đảm bảo chính xác
-        elif legal_text and not citation:
-            response = f"""Chào bạn, dựa trên quy định của Luật Xuất cảnh, nhập cảnh của công dân Việt Nam, tôi xin trả lời câu hỏi: "{query}" như sau:
-
-Hiện tại dữ liệu hệ thống đang được cập nhật, không đảm bảo tính chính xác nên tạm thời chưa có thông tin cụ thể, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"""
-            
-            return {
-                'success': True,
-                'answer': response,
-                'provider': 'fallback_uncertain',
-                'method': 'uncertain_data'
-            }
-        
-        # 🔧 CASE 3: Thất bại hoàn toàn - lỗi hệ thống  
+        # Natural opening với conversation context
+        if conversation_bridge:
+            opening = f"Chào bạn, để {conversation_bridge}, tôi xin trả lời như sau:"
         else:
-            response = f"""Chào bạn, dựa trên quy định của Luật Xuất cảnh, nhập cảnh của công dân Việt Nam, tôi xin trả lời câu hỏi: "{query}" như sau:
+            opening = f"Chào bạn, về câu hỏi \"{query}\", tôi xin trả lời như sau:"
+        
+        # CASE 1: Có đủ thông tin - format tự nhiên
+        if citation and legal_text:
+            response = f"""{opening}
 
-Hệ thống gặp sự cố kỹ thuật khi xử lý câu hỏi này, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"""
+    Căn cứ {citation}:
+
+        "{legal_text}"
+
+    Đây là thông tin tham khảo, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"""
             
             return {
                 'success': True,
                 'answer': response,
-                'provider': 'fallback_error',
-                'method': 'system_error'
+                'provider': 'fallback_with_content_enhanced',
+                'method': 'conversation_aware_fallback'
+            }
+        
+        # CASE 2: Không đảm bảo chính xác - NGẮN GỌN
+        elif legal_text and not citation:
+            response = f"""Chào bạn,
+
+    Hiện tại dữ liệu hệ thống đang được cập nhật, không đảm bảo tính chính xác nên tạm thời chưa có thông tin cụ thể, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"""
+            
+            return {
+                'success': True,
+                'answer': response,
+                'provider': 'fallback_uncertain_clean',
+                'method': 'clean_uncertain'
+            }
+        
+        # CASE 3: Lỗi hệ thống - SIÊU NGẮN GỌN
+        else:
+            response = f"""Chào bạn,
+
+    Hệ thống gặp sự cố kỹ thuật khi xử lý câu hỏi này, để được tư vấn chính xác vui lòng liên hệ cán bộ hướng dẫn hoặc truy cập website: https://dichvucong.bocongan.gov.vn"""
+            
+            return {
+                'success': True,
+                'answer': response,
+                'provider': 'fallback_error_clean',
+                'method': 'clean_error'
             }
     
     def get_stats(self) -> Dict[str, Any]:

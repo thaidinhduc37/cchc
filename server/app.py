@@ -1,13 +1,12 @@
 from flask import Flask
 from flask_cors import CORS
-from routes.chat_routes import chat_routes
-from routes.assistant_routes import assistant_routes
+from app.api.chat_routes import chat_routes
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
 
 app.register_blueprint(chat_routes)
-app.register_blueprint(assistant_routes)
+
 
 @app.route("/", methods=["GET"])
 def health_check():
@@ -16,14 +15,14 @@ def health_check():
 # ===== SỬA LOGIC: AUTO-INITIALIZE VECTOR RAG ON STARTUP =====
 try:
     # SỬA: Import đúng class thay vì function
-    from services.vector_rag.rag_engine import RAGEngine
+    from app.services.vector_rag.rag_engine import RAGEngine
     VECTOR_RAG_AVAILABLE = True
     print("✅ Vector RAG class loaded successfully")
     
     # SỬA: AUTO-INITIALIZE RAG với class
     print("🚀 Auto-initializing Vector RAG on server startup...")
     
-    from services.unified_processor import initialize_rag_engine
+    from app.services.unified_processor import initialize_rag_engine
     import asyncio
     import threading
     

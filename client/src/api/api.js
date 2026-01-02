@@ -2,6 +2,7 @@
 import axios from 'axios';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = 'http://localhost:5000/api';
 
 // Tạo axios instance với cấu hình mặc định
 const apiClient = axios.create({
@@ -53,7 +54,7 @@ export const getStaticFileUrl = (filePath) => {
     }
     
     // Fallback
-    return `${BASE_URL}/static/dataset/${filePath}`;
+    return `${BASE_URL}/static/data/${filePath}`;
 };
 
 export const getImageUrl = (imagePath) => {
@@ -203,3 +204,6 @@ const apiHelpers = {
 };
 
 export default apiHelpers;
+
+
+// -----------------Auth----------------------

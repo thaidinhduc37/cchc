@@ -17,11 +17,11 @@ const RightPanel = ({ userId, currentStep = null, flowData = null, guideImage = 
             },
             {
                 question: 'Thời gian làm hộ chiếu bao lâu?',
-                answer: 'Thời gian làm hộ chiếu thông thường là 7-10 ngày làm việc kể từ ngày nộp hồ sơ đầy đủ.',
+                answer: 'Thời gian làm hộ chiếu thông thường là 08 ngày làm việc kể từ ngày nộp hồ sơ đầy đủ.',
             },
             {
                 question: 'Chi phí làm hộ chiếu là bao nhiêu?',
-                answer: 'Lệ phí làm hộ chiếu phổ thông là 200.000 VNĐ cho hộ chiếu có thời hạn 10 năm.',
+                answer: 'Lệ phí làm hộ chiếu phổ thông là 100.000 VNĐ đối với hộ chiếu cấp mới, cấp đổi do hết hạn và 200.000 VNĐ đối với hộ chiếu cấp lại, cấp đổi do hư hỏng.',
             },
             {
                 question: 'Có thể làm hộ chiếu online không?',
@@ -45,12 +45,12 @@ const RightPanel = ({ userId, currentStep = null, flowData = null, guideImage = 
     const renderGuideContent = () => {
         // FIXED: Xác định đang trong flow
         const isInFlow = currentStep !== null && flowData !== null;
-        
+
         console.log('🎯 Flow status check:', {
             currentStep,
             flowData: !!flowData,
             isInFlow,
-            hasGuideImage: !!guideImage
+            hasGuideImage: !!guideImage,
         });
 
         return (
@@ -70,7 +70,7 @@ const RightPanel = ({ userId, currentStep = null, flowData = null, guideImage = 
                             onError={(e) => {
                                 console.error('❌ Image loading error:', e.target.src);
                                 e.target.style.display = 'none';
-                                
+
                                 // Hiển thị placeholder khi lỗi ảnh
                                 if (
                                     e.target.parentNode &&
@@ -107,7 +107,7 @@ const RightPanel = ({ userId, currentStep = null, flowData = null, guideImage = 
                             <p>Bước {currentStep || 'hiện tại'} chưa có ảnh minh họa</p>
                         </div>
                     ) : (
-                        // KHÔNG trong flow - hiển thị placeholder mặc định
+                    
                         <div
                             className={cx('default-placeholder')}
                             style={{
@@ -123,8 +123,8 @@ const RightPanel = ({ userId, currentStep = null, flowData = null, guideImage = 
                         >
                             <h4>🗂️ Hướng dẫn quy trình</h4>
                             <p>
-                                Để có thể thuận tiện hướng dẫn, bạn hãy nhập "Hướng dẫn tôi quy trình thực hiện nộp hồ
-                                sơ Dịch vụ công ....." bên Chatbot Dịch vụ công
+                                Để có thể thuận tiện hướng dẫn, bạn hãy nhập "Hướng dẫn tôi cấp ...... trực tuyến" bên
+                                Chatbot Dịch vụ công
                             </p>
                         </div>
                     )}

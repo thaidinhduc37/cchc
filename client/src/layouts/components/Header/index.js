@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './Header.module.scss';
 import images from '~/assets/images';
@@ -7,6 +7,7 @@ const cx = classNames.bind(styles);
 
 const Header = ({ currentPage }) => {
     const navRef = useRef(null);
+    const [isOpen, setIsOpen] = useState(false);
 
     // Auto detect current page from URL if not provided
     const getCurrentPage = () => {
@@ -17,6 +18,7 @@ const Header = ({ currentPage }) => {
         if (path.includes('gioi-thieu')) return 'about';
         if (path.includes('tro-ly-ao') || path.includes('chatbot')) return 'chatbot';
         if (path.includes('gop-y')) return 'feedback';
+        if (path.includes('notebooklm')) return 'expert';
         return 'home';
     };
 
@@ -34,6 +36,7 @@ const Header = ({ currentPage }) => {
                 about: '/gioi-thieu',
                 chatbot: '/tro-ly-ao',
                 feedback: '/gop-y',
+                expert: '/notebooklm'
             };
 
             const targetHref = pageMap[activePage];
@@ -48,7 +51,7 @@ const Header = ({ currentPage }) => {
 
     return (
         <header
-            className={cx('header')}
+            className={cx('header', { 'mobile-open': isOpen })}
             style={{
                 backgroundImage: `url(${images.backgroundHeader})`,
             }}
@@ -68,7 +71,15 @@ const Header = ({ currentPage }) => {
                         </div>
                     </div>
 
-                    {/* Navigation Menu - Giữa */}
+                    {/* Nút ☰ - chỉ hiện mobile */}
+                    <button 
+                        className={cx('hamburger')}
+                        onClick={() => setIsOpen(!isOpen)}
+                    >
+                        ☰
+                    </button>
+
+                    {/* Navigation Menu */}
                     <nav className={cx('nav')} ref={navRef}>
                         <a href="/" className={cx('nav-link')}>
                             <span className={cx('icon')} role="img" aria-label="home">
@@ -90,7 +101,7 @@ const Header = ({ currentPage }) => {
                         </a>
                     </nav>
 
-                    {/* Auth Buttons - Góc phải */}
+                    {/* Auth Buttons */}
                     <div className={cx('auth-buttons')}>
                         <a href="/register" className={cx('btn', 'btn-register')}>
                             Đăng ký
@@ -99,13 +110,6 @@ const Header = ({ currentPage }) => {
                             Đăng nhập
                         </a>
                     </div>
-
-                    {/* Mobile Menu Button */}
-                    {/* <button className={cx('mobile-menu-btn')}>
-                        <svg className={cx('menu-icon')} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button> */}
                 </div>
             </div>
         </header>

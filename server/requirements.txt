@@ -20,7 +20,7 @@ pyttsx3==2.90
 gtts==2.3.2
 pygame==2.5.2
 underthesea
-git+https://github.com/dangvansam/viet-tts.git
+
 
 # File Handling
 PyPDF2==3.0.1
@@ -32,3 +32,6 @@ python-pptx>=0.6.21
 pytest>=7.0.0
 black>=22.0.0
 flake8>=5.0.0
+fuzzywuzzy
+
+jwt

@@ -1,40 +1,113 @@
-cchc/
-├── server/
-│   ├── app.py                       # Điểm vào chính của ứng dụng
-│   ├── config/                      # Cấu hình ứng dụng
-│   │   ├── settings.py              # Cấu hình chung
-│   │   └── ollama.py               # Cấu hình Ollama
-│   ├── controllers/                 # Xử lý logic nghiệp vụ
-│   │   ├── chat_controller.py      # Xử lý chat thông thường
-│   │   └── assistant_controller.py # Xử lý trợ lý ảo
-│   ├── dataset/                    # Dữ liệu theo từng lĩnh vực
-│   │   ├── cancuoc/                
-│   │   │   ├── flow.json          
-│   │   │   └── data_files/         # Chứa PDF, DOCX, XLSX, TXT
-│   │   ├── honnhan/
-│   │   └── ...                    
-│   ├── routes/                      # Định tuyến API
-│   │   ├── chat_routes.py          # API chat
-│   │   └── assistant_routes.py     # API trợ lý ảo
-│   ├── services/                   # Các dịch vụ
-│   │   ├── ollama_service.py       # Tương tác với Ollama
-│   │   ├── vector_db.py            # Xử lý vector database
-│   │   ├── document_processor/     # Xử lý tài liệu
-│   │   │   ├── __init__.py         
-│   │   │   ├── pdf_processor.py   
-│   │   │   ├── docx_processor.py  
-│   │   │   ├── xlsx_processor.py  
-│   │   │   ├── json_processor.py  
-│   │   │   └── txt_processor.py   
-│   │   ├── speech_services/        # Dịch vụ âm thanh
-│   │   │   ├── text_to_speech.py  
-│   │   │   └── speech_to_text.py  
-│   │   └── flow_engine.py          # Xử lý luồng hướng dẫn
-│   ├── utils/                      # Công cụ tiện ích
-│   │   ├── context_manager.py     # Quản lý ngữ cảnh hội thoại
-│   │   ├── prompt_builder.py      # Tạo prompt cho LLM
-│   │   └── response_formatter.py  # Định dạng phản hồi
-│   └── vector_db/                 # Thư mục chứa vector database
-│       └── embeddings/            # Lưu trữ các embedding
-├── client/                        # Front-end (nếu có)
-└── requirements.txt              # Cấu hình thư viện
+project_root/
+├── app/                              # Main application logic
+│   ├── api/                          # API layer
+│   │   ├── __init__.py
+│   │   ├── routes.py                 # API routing definitions
+│   │   ├── controller.py             # Single unified controller
+│   │   └── middleware.py             # Authentication middleware
+│   │
+│   ├── auth/                         # Authentication & Authorization
+│   │   ├── __init__.py
+│   │   ├── auth_service.py           # Authentication logic
+│   │   ├── user_management.py        # User CRUD operations
+│   │   ├── jwt_handler.py            # JWT token handling
+│   │   └── permissions.py            # Role-based permissions
+│   │
+│   ├── admin/                        # Admin panel & controls
+│   │   ├── __init__.py
+│   │   ├── admin_controller.py       # Admin operations
+│   │   ├── system_monitor.py         # System health monitoring
+│   │   ├── user_admin.py             # User management admin
+│   │   └── rag_admin.py              # RAG system administration
+│   │
+│   ├── evaluation/                   # RAG evaluation system
+│   │   ├── __init__.py
+│   │   ├── rag_evaluator.py          # RAG performance evaluation
+│   │   ├── feedback_collector.py     # User feedback collection
+│   │   ├── quality_metrics.py        # Quality measurement
+│   │   ├── benchmark_runner.py       # Automated benchmarks
+│   │   └── report_generator.py       # Evaluation reports
+│   │
+│   └── services/                     # Business logic layer
+│       ├── __init__.py
+│       ├── unified_processor.py      # Tiếp nhận thông tin từ user
+│       ├── flow_engine.py           # Điều hướng steps theo flow.json
+│       ├── assistant_loop.py        # Assistant conversation loop
+│       ├── debug_rag_services.py    # Debug utilities
+│       │
+│       └── vector_rag/              # RAG system (Enhanced)
+│           ├── __init__.py
+│           ├── rag_config.py        # Configuration
+│           ├── rag_engine.py        # Main RAG orchestrator
+│           ├── rag_mapping.py       # Domain mapping
+│           │
+│           ├── core/                # Core RAG modules
+│           │   ├── __init__.py
+│           │   ├── document_processor.py
+│           │   ├── embeddings.py
+│           │   ├── vector_store.py
+│           │   ├── reranker.py
+│           │   └── llm_handler.py
+│           │
+│           ├── tools/               # Build & Management tools
+│           │    ├── build_vector.py  # Vector database builder ⭐
+│           │    └── rebuild_index.py # Index rebuilding utility
+│           │
+│           ├── kag/                 # KAG modules (Future)
+│           │   ├── __init__.py
+│           │   ├── graph_builder.py
+│           │   ├── graph_database.py
+│           │   ├── legal_entities.py
+│           │   ├── query_analyzer.py
+│           │   ├── hybrid_retrieval.py
+│           │   └── legal_reasoning.py
+│           │
+│           ├── debug/               # Debug utilities
+│           │   ├── __init__.py
+│           │   ├── build_vector.py
+│           │   ├── debug_documents.py
+│           │   ├── debug_embeddings.py
+│           │   ├── debug_rag_build.py
+│           │   ├── debug_rag_search.py
+│           │   ├── debug_vector_store.py
+│           │   └── context_optimizer.py
+│           │
+│           └── utils/               # Utilities
+│               ├── __init__.py
+│               ├── graph_visualization.py
+│               └── evaluation_metrics.py
+│
+├── cache/                           # Cache & Session storage
+│   ├── conversations/               # Chat history
+│   ├── user_sessions/              # User session data
+│   └── auth_tokens/                # Token storage (Redis/Memory)
+│
+├── database/                        # Database files
+│   ├── users.db                    # User database (SQLite/PostgreSQL)
+│   ├── conversations.db            # Chat history database
+│   ├── feedback.db                 # User feedback database
+│   └── evaluation_results.db       # RAG evaluation results
+│
+├── data/                           # Domain data storage
+│   └── xuatnhapcanh/              # Domain folder
+│       ├── documents/             # Legal documents (.docx files)
+│       ├── images/                # Step-by-step images
+│       ├── vector_store/          # Built vector database
+│       │   ├── documents.pkl
+│       │   ├── metadata.pkl
+│       │   └── faiss_index.bin
+│       ├── flow.json              # Flow navigation config
+│       └── response.json          # Response templates
+│
+├── logs/                          # Application logs
+│   ├── app.log                    # General application logs
+│   ├── auth.log                   # Authentication logs
+│   ├── rag_performance.log        # RAG performance logs
+│   └── user_activity.log          # User activity tracking
+│
+├── requirements.txt               # Dependencies
+├── config.py                      # Application configuration
+├── app.py                        # Main application entry point
+├── cautruc.txt                   # Structure documentation
+├── README.md                     # Project documentation
+└── docker-compose.yml            # Docker configuration

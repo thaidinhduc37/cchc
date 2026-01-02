@@ -1,15 +1,85 @@
 @import 'normalize.css';
 
 :root {
-    --primary: #fe2c55;
-    --black-color: #000;
-    --white-color: white;
-    --primary-color: #ff8a00;
-
-    // Default Layout
-    --default-layout-header-height: 60px;
-    --default-layout-width: 1150px;
+    // Brand Colors - Thân thiện và hiện đại
+    --primary: #4F46E5; // Indigo đẹp
+    --primary-hover: #4338CA;
+    --primary-light: #EEF2FF;
+    --secondary: #06B6D4; // Cyan tươi mát
+    --secondary-hover: #0891B2;
+    --accent: #F59E0B; // Amber ấm áp
+    --accent-hover: #D97706;
+    
+    // Chatbot specific colors
+    --chatbot-primary: #10B981; // Emerald thân thiện
+    --chatbot-primary-dark: #059669;
+    --chatbot-primary-light: #D1FAE5;
+    --chatbot-secondary: #8B5CF6; // Purple hiện đại
+    --chatbot-accent: #F472B6; // Pink vui tươi
+    
+    // Neutral Colors - Mắt nhìn thoải mái
+    --white: #FFFFFF;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+    
+    // Status Colors
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    --info: #3B82F6;
+    
+    // Background & Text
+    --bg-primary: #FAFBFC;
+    --bg-secondary: #F7F9FC;
+    --bg-dark: #0F172A;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --text-light: #94A3B8;
+    
+    // Layout
+    --default-layout-header-height: 64px;
+    --default-layout-width: 1200px;
     --default-layout-horizontal-spacer: 24px;
+    
+    // Border Radius - Hiện đại
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+    
+    // Shadows - Mềm mại
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    // Transitions
+    --transition-fast: 150ms ease;
+    --transition-normal: 300ms ease;
+    --transition-slow: 500ms ease;
+    
+    // Spacing - Consistent
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
 }
 
 * {
@@ -19,60 +89,62 @@
 }
 
 html {
-    font-size: 62.5%;
+    font-size: 62.5%; // 1rem = 10px
+    scroll-behavior: smooth;
 }
 
 body {
-    background: #1a1a1a;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
     margin: 0;
-    font-family: Arial, Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 14px;
-    color: #dcdcdc;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.4rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
 }
 
-// CSS Scrolling
-
+// ===== BEAUTIFUL SCROLLBARS =====
 html *::-webkit-scrollbar {
-    border-radius: 0px;
     width: 8px;
-}
-
-html *::-webkit-scrollbar-thumb {
-    border-radius: 4px;
-    background-color: rgba(22, 24, 35, 0.06);
+    height: 8px;
 }
 
 html *::-webkit-scrollbar-track {
-    border-radius: 0px;
-    background-color: rgba(0, 0, 0, 0);
+    background: var(--gray-100);
+    border-radius: var(--radius-sm);
 }
 
+html *::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--gray-100);
+    
+    &:hover {
+        background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%);
+    }
+}
+
+html *::-webkit-scrollbar-corner {
+    background: var(--gray-100);
+}
+
+// ===== LINKS =====
 a {
     text-decoration: none;
-}
-
-// Custom Tippu tooltip
-
-body {
-    .tippy-box {
-        background-color: rgba(84, 84, 84, 0.92);
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1.6rem;
-        line-height: 2.2rem;
-    }
-    .tippy-arrow {
-        color: rgba(84, 84, 84, 0.92);
-    }
-    .tippy-content {
-        padding: 8px 9px;
-    }
-    .tippy-box[data-placement^='bottom'] > .tippy-arrow::before {
-        top: -8px;
+    color: var(--primary);
+    transition: var(--transition-fast);
+    
+    &:hover {
+        color: var(--primary-hover);
+        text-decoration: underline;
     }
 }
 
-ul {
+// ===== LISTS =====
+ul, ol {
     margin: 0;
     padding: 0;
 }
@@ -81,10 +153,167 @@ li {
     list-style: none;
 }
 
+// ===== UTILITIES =====
 .clear {
     clear: both;
 }
 
-b {
-    font-weight: 700;
+b, strong {
+    font-weight: 600;
+}
+
+// ===== ENHANCED TIPPY TOOLTIPS =====
+body {
+    .tippy-box {
+        background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+        border-radius: var(--radius-md);
+        font-weight: 500;
+        font-size: 1.3rem;
+        line-height: 1.4;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .tippy-arrow {
+        color: var(--gray-800);
+    }
+    
+    .tippy-content {
+        padding: var(--space-2) var(--space-3);
+    }
+    
+    .tippy-box[data-placement^='bottom'] > .tippy-arrow::before {
+        top: -8px;
+    }
+}
+
+// ===== FOCUS STYLES =====
+*:focus {
+    outline: none;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+// ===== SELECTION STYLES =====
+::selection {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+::-moz-selection {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+// ===== COMMON ANIMATIONS =====
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 53%, 80%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+        transform: translate3d(0, -8px, 0);
+    }
+    70% {
+        transform: translate3d(0, -4px, 0);
+    }
+    90% {
+        transform: translate3d(0, -2px, 0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+// ===== ACCESSIBILITY =====
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+// ===== PRINT STYLES =====
+@media print {
+    *,
+    *:before,
+    *:after {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+    
+    a,
+    a:visited {
+        text-decoration: underline;
+    }
+    
+    pre,
+    blockquote {
+        border: 1px solid #999;
+        page-break-inside: avoid;
+    }
+    
+    thead {
+        display: table-header-group;
+    }
+    
+    tr,
+    img {
+        page-break-inside: avoid;
+    }
+    
+    img {
+        max-width: 100% !important;
+    }
+    
+    p,
+    h2,
+    h3 {
+        orphans: 3;
+        widows: 3;
+    }
+    
+    h2,
+    h3 {
+        page-break-after: avoid;
+    }
 }

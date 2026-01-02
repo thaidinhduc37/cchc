@@ -1,4 +1,4 @@
-// --- CUSTOM HOOK: useChatbot.js - FIXED VERSION ---
+// --- CUSTOM HOOK: useChatbot.js - ENHANCED FOR TYPING ANIMATION ---
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { sendMessageToBot, handleApiError, testConnection } from '~/api/api';
 
@@ -21,6 +21,9 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
     const [flowData, setFlowData] = useState(null);
     const [guideImage, setGuideImage] = useState(null);
     const [guideInfo, setGuideInfo] = useState(null);
+
+    // STATE MỚI CHO TYPING ANIMATION
+    const [isTyping, setIsTyping] = useState(false);
 
     // Refs
     const recognitionRef = useRef(null);
@@ -53,9 +56,10 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
         };
     }, []);
 
-    // Message management
+    // Message management - Enhanced cho typing animation
     const addBotMessage = (text) => {
         setResponses((prev) => [...prev, { text, sender: 'bot', timestamp: new Date() }]);
+        setIsTyping(false); // Reset typing state khi có tin nhắn mới
     };
 
     const addUserMessage = (text) => {
@@ -64,7 +68,7 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
 
     // XỬ LÝ DỮ LIỆU TỪ BACKEND VÀ TRUYỀN LÊN RIGHTPANEL
     const handleBackendResponse = (res) => {
-        console.log('🔄 Processing backend response:', res);
+        console.log('📄 Processing backend response:', res);
 
         // Cập nhật các state hiện có
         setShowFlowButton(!!res.show_flow_button);
@@ -201,7 +205,7 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
         }
     };
 
-    // Message sending - cải thiện với speech result
+    // Message sending - Enhanced với typing animation
     const handleSend = async (speechText = null) => {
         const textToSend = speechText || message.trim();
 
@@ -210,21 +214,30 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
         addUserMessage(textToSend);
         setMessage('');
         setIsLoading(true);
+        setIsTyping(true); // Bắt đầu typing state
 
         try {
             const res = await sendMessageToBot(textToSend, userId);
-            addBotMessage(res.reply);
+            
+            // Delay nhỏ để có hiệu ứng tự nhiên hơn
+            setTimeout(() => {
+                addBotMessage(res.reply);
+                
+                // XỬ LÝ DỮ LIỆU TỪ BACKEND
+                handleBackendResponse(res);
 
-            // XỬ LÝ DỮ LIỆU TỪ BACKEND
-            handleBackendResponse(res);
+                // Đọc phản hồi nếu TTS bật
+                if (isTTSEnabled && res.reply) {
+                    speak(res.reply);
+                }
+            }, 500);
 
-            // Đọc phản hồi nếu TTS bật
-            if (isTTSEnabled && res.reply) {
-                speak(res.reply);
-            }
         } catch (error) {
             const errorMessage = handleApiError(error);
-            addBotMessage(`❌ ${errorMessage}`);
+            setTimeout(() => {
+                addBotMessage(`❌ ${errorMessage}`);
+                setIsTyping(false);
+            }, 300);
         } finally {
             setIsLoading(false);
         }
@@ -233,43 +246,63 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
     const handleSendOption = async (option) => {
         addUserMessage(option);
         setIsLoading(true);
+        setIsTyping(true);
 
         try {
             const res = await sendMessageToBot(option, userId);
-            addBotMessage(res.reply);
+            
+            setTimeout(() => {
+                addBotMessage(res.reply);
+                
+                // XỬ LÝ DỮ LIỆU TỪ BACKEND
+                handleBackendResponse(res);
 
-            // XỬ LÝ DỮ LIỆU TỪ BACKEND
-            handleBackendResponse(res);
+                // Đọc phản hồi nếu TTS bật
+                if (isTTSEnabled && res.reply) {
+                    speak(res.reply);
+                }
+            }, 500);
 
-            // Đọc phản hồi nếu TTS bật
-            if (isTTSEnabled && res.reply) {
-                speak(res.reply);
-            }
         } catch (error) {
             const errorMessage = handleApiError(error);
-            addBotMessage(`❌ ${errorMessage}`);
+            setTimeout(() => {
+                addBotMessage(`❌ ${errorMessage}`);
+                setIsTyping(false);
+            }, 300);
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleStepControl = async (direction) => {
+        setIsLoading(true);
+        setIsTyping(true);
+        
         try {
             const res = await sendMessageToBot(direction, userId);
-            addBotMessage(res.reply);
+            
+            setTimeout(() => {
+                addBotMessage(res.reply);
+                
+                // XỬ LÝ DỮ LIỆU TỪ BACKEND
+                handleBackendResponse(res);
 
-            // XỬ LÝ DỮ LIỆU TỪ BACKEND
-            handleBackendResponse(res);
+                // Đọc phản hồi nếu TTS bật
+                if (isTTSEnabled && res.reply) {
+                    speak(res.reply);
+                }
 
-            // Đọc phản hồi nếu TTS bật
-            if (isTTSEnabled && res.reply) {
-                speak(res.reply);
-            }
+                setInStepMode(!!res.step_mode);
+            }, 500);
 
-            setInStepMode(!!res.step_mode);
         } catch (error) {
             const errorMessage = handleApiError(error);
-            addBotMessage(`❌ ${errorMessage}`);
+            setTimeout(() => {
+                addBotMessage(`❌ ${errorMessage}`);
+                setIsTyping(false);
+            }, 300);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -293,6 +326,9 @@ export const useChatbot = (userId = 'anonymous', onDataUpdate = null) => {
         flowData,
         guideImage,
         guideInfo,
+
+        // STATE MỚI CHO TYPING ANIMATION  
+        isTyping,
 
         // Methods
         handleSend,
